@@ -1,0 +1,116 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<enclosure>
+  <package name="3dchess">
+    <arch name="amd64">
+      <everyversion/>
+    </arch>
+    <arch name="armel">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="armhf">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="i386">
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="kfreebsd-amd64">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="kfreebsd-i386">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="mips">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="mipsel">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="powerpc">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="s390x">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="sparc">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+  </package>
+  <package name="blobwars-data">
+    <arch name="all">
+      <version number="1.19-2"/>
+    </arch>
+  </package>
+  <package name="extremetuxracer">
+    <everyarch/>
+  </package>
+  <package name="extremetuxracer-data">
+    <arch name="all">
+      <version number="0.4-5"/>
+    </arch>
+  </package>
+  <package name="extremetuxracer-extras">
+    <arch name="all">
+      <everyversion/>
+    </arch>
+  </package>
+  <package name="extremetuxracer-gimp-dev">
+    <arch name="all">
+      <everyversion/>
+    </arch>
+  </package>
+  <package name="libc6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libgcc1">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl-image1.2">
+    <everyarch/>
+  </package>
+  <package name="libsdl-net1.2">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl-ttf2.0-0">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl1.2debian">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libstdc++6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libxt6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="xaw3dg">
+    <everyarch/>
+  </package>
+  <package name="zlib1g">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+</enclosure>
