@@ -177,7 +177,7 @@ class Enclosure:
                                                      "enclosure structure from xml: " + str(err))
                     return False
             return True
-        except Exception as err:
+        except etree.XMLSyntaxError as err:
             raise EnclosureImportSyntaxError('''Syntax error has been appeared during importing 
                                              enclosure structure from xml: ''' + str(err))
             return False

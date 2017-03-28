@@ -16,7 +16,7 @@
 #
 '''Coownership structure processing'''
 
-from xml.etree import ElementTree as etree
+from lxml import etree
 from limitedapt.packages import ConcretePackage
 from limitedapt.errors import *
 
@@ -108,8 +108,7 @@ class CoownershipList:
                                                        "coownership table from xml: " + str(err))
                     return False                 
             return True 
-        #FIXME: Use 'XMLSyntaxError'                   
-        except Exception as err:
+        except etree.XMLSyntaxError as err:
             raise CoownershipImportSyntaxError('''Syntax error has been appeared during importing
                                                coownership table from xml: ''' + str(err))
             return False

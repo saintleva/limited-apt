@@ -57,8 +57,13 @@ class CoownershipFileTestCase(unittest.TestCase):
  
     def test_file_dont_exist(self):
         self._coownership = CoownershipList()
-        with self.assertRaises(CoownershipImportSyntaxError):
+        with self.assertRaises(OSError):
             self._coownership.import_from_xml("data/not-a-file")        
+            
+    def test_file_invalid_syntax(self):
+        self._coownership = CoownershipList()
+        with self.assertRaises(CoownershipImportSyntaxError):
+            self._coownership.import_from_xml("data/abrakadabra")        
             
 
 class CoownershipEditTestCase(unittest.TestCase):            
@@ -93,6 +98,5 @@ class CoownershipEditTestCase(unittest.TestCase):
         owners = self._coownership.owners_of(ConcretePackage("extremetuxracer", "amd64"))
         self.assertSetEqual(owners, set())
         
-
 if __name__ == "__main__":
     unittest.main(verbosity=2)
