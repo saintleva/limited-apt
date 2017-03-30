@@ -1,160 +1,125 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version='1.0' encoding='UTF-8'?>
 <enclosure>
-
-    <!-- 
-        Пакеты, необходимые для установки игры 3dchess
-    -->
-    
-    <!-- Сам пакет 3dchess -->
-    
-    <package name="3dchess">
-        <arch name="amd64">
-            <everyversion />
-        </arch>
-        <arch name="armel">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="armhf">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="i386">
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="kfreebsd-amd64">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="kfreebsd-i386">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="mips">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="mipsel">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="powerpc">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="s390x">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-        <arch name="sparc">
-            <version number="0.8.1-16" />
-            <version number="0.8.1-17" />
-        </arch>
-    </package>
-    
-    <!-- Библиотеки языка C (считаем все версии и архитектуры несистемообразующими) -->
-    
-    <package name="libc6">
-        <everyarch>
-            <everyversion />
-        </everyarch>
-    </package> 
-    <package name="libgcc1">
-        <everyarch>
-            <everyversion />
-        </everyarch>
-    </package>
-    
-    <package name="libxt6">
-        <everyarch>
-            <everyversion />
-        </everyarch>
-    </package> 
-    
-    <package name="xaw3dg">
-        <everyarch>
-            <version number="1.5+E-18" />
-            <version number="1.5+E-18.2" />
-        </everyarch>
-    </package> 
-    
-
-    <!-- 
-        Пакеты, необходимые для установки игры blobwars
-    -->
-    
-    <!-- Пакеты libc6 и libgcc1 уже есть в enclosure -->
-    
-    <!-- Библиотека Simple DirectMedia Layer -->
-    
-    <package name="libsdl-image1.2">
-        <everyarch>
-            <version number="1.2.10-2+b2" />
-            <version number="1.2.12-2" />
-            <version number="1.2.12-5+b2" />
-        </everyarch>
-    </package>
-    
-    <package name="libsdl-net1.2">
-        <everyarch>
-            <everyversion />
-        </everyarch>
-    </package>
-    
-    <package name="libsdl-ttf2.0-0">
-        <everyarch>
-            <everyversion />
-        </everyarch>
-    </package>
-    
-    <package name="libsdl1.2debian">
-        <everyarch>
-            <everyversion />
-        </everyarch>
-    </package>
-    
-    <package name="libstdc++6">
-        <everyarch>
-            <everyversion />
-        </everyarch>
-    </package>
-    
-    <package name="zlib1g">
-        <everyarch>
-            <everyversion />
-        </everyarch>
-    </package>
-    
-    <package name="blobwars-data">        
-        <arch name="all">
-            <version number="1.19-2" />
-        </arch>
-    </package>
-    
-    
-    <!-- 
-        Пакеты, необходимые для установки игры Tux Racer
-    -->
-    
-    <package name="extremetuxracer">
-        <everyarch>
-            <version number="0.4-5" />
-        </everyarch>
-    </package>
-    <package name="extremetuxracer-data">
-        <arch name="all">
-            <version number="0.4-5" />
-        </arch>
-    </package>
-    <package name="extremetuxracer-extras">
-        <arch name="all">
-            <everyversion />
-        </arch>
-    </package>
-    <package name="extremetuxracer-gimp-dev">
-        <arch name="all">
-            <everyversion />
-        </arch>
-    </package>
-    
+  <package name="3dchess">
+    <arch name="amd64">
+      <everyversion/>
+    </arch>
+    <arch name="armel">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="armhf">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="i386">
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="kfreebsd-amd64">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="kfreebsd-i386">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="mips">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="mipsel">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="powerpc">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="s390x">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="sparc">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+  </package>
+  <package name="blobwars-data">
+    <arch name="all">
+      <version number="1.19-2"/>
+    </arch>
+  </package>
+  <package name="extremetuxracer">
+    <everyarch>
+      <version number="0.4-5"/>
+    </everyarch>
+  </package>
+  <package name="extremetuxracer-data">
+    <arch name="all">
+      <version number="0.4-5"/>
+    </arch>
+  </package>
+  <package name="extremetuxracer-extras">
+    <arch name="all">
+      <everyversion/>
+    </arch>
+  </package>
+  <package name="extremetuxracer-gimp-dev">
+    <arch name="all">
+      <everyversion/>
+    </arch>
+  </package>
+  <package name="libc6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libgcc1">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl-image1.2">
+    <everyarch>
+      <version number="1.2.10-2+b2"/>
+      <version number="1.2.12-2"/>
+      <version number="1.2.12-5+b2"/>
+    </everyarch>
+  </package>
+  <package name="libsdl-net1.2">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl-ttf2.0-0">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl1.2debian">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libstdc++6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libxt6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="xaw3dg">
+    <everyarch>
+      <version number="1.5+E-18"/>
+      <version number="1.5+E-18.2"/>
+    </everyarch>
+  </package>
+  <package name="zlib1g">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
 </enclosure>

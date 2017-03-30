@@ -95,7 +95,7 @@ class ArchAndVersions:
     def add(self, versions, arch=None):        
         if self.every:
             assert arch is None
-            __every = versions
+            self.every = versions
         else:
             assert arch is not None
             self.__data[arch] = versions
@@ -158,8 +158,10 @@ class Enclosure:
                         if everyversion_element is not None:
                             arch_and_versions.every = Versions(isevery=True)
                         else:
-                            for version_element in everyarch_element.findall("version"): 
-                                arch_and_versions.add(version_element.get("number"))
+                            versions = Versions()
+                            for version_element in everyarch_element.findall("version"):
+                                versions.add(version_element.get("number"))                                 
+                            arch_and_versions.add(versions)
                     else:
                         arch_and_versions = ArchAndVersions()
                         for arch_element in package_element.findall("arch"):
@@ -175,9 +177,6 @@ class Enclosure:
                 except (ValueError, LookupError) as err:
                     raise EnclosureImportSyntaxError("Syntax error has been appeared during importing "
                                                      "enclosure structure from xml: " + str(err))
-                    return False
-            return True
         except etree.XMLSyntaxError as err:
             raise EnclosureImportSyntaxError('''Syntax error has been appeared during importing 
                                              enclosure structure from xml: ''' + str(err))
-            return False

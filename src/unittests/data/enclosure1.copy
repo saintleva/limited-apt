@@ -50,7 +50,9 @@
     </arch>
   </package>
   <package name="extremetuxracer">
-    <everyarch/>
+    <everyarch>
+      <version number="0.4-5"/>
+    </everyarch>
   </package>
   <package name="extremetuxracer-data">
     <arch name="all">
@@ -78,7 +80,11 @@
     </everyarch>
   </package>
   <package name="libsdl-image1.2">
-    <everyarch/>
+    <everyarch>
+      <version number="1.2.10-2+b2"/>
+      <version number="1.2.12-2"/>
+      <version number="1.2.12-5+b2"/>
+    </everyarch>
   </package>
   <package name="libsdl-net1.2">
     <everyarch>
@@ -106,7 +112,10 @@
     </everyarch>
   </package>
   <package name="xaw3dg">
-    <everyarch/>
+    <everyarch>
+      <version number="1.5+E-18"/>
+      <version number="1.5+E-18.2"/>
+    </everyarch>
   </package>
   <package name="zlib1g">
     <everyarch>

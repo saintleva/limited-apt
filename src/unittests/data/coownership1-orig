@@ -20,10 +20,10 @@
     <user name="olduser2"/>
   </package>
   <package arch="armhf" name="konsole">
-    <user name="anthony"/>
-    <user name="loh"/>
+      <user name="loh" />
+      <user name="anthony" />
   </package>
   <package arch="all" name="python3-doc">
-    <user name="anthony"/>
+      <user name="anthony" />
   </package>
 </packages>

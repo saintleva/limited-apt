@@ -25,7 +25,7 @@ class CoownershipTestCase1(unittest.TestCase):
 
     def setUp(self):
         self._coownership = CoownershipList()
-        self._coownership.import_from_xml("data/coownership1")
+        self._coownership.import_from_xml("data/coownership1-orig")
 
     def test_is_own(self):
         self.assertTrue(self._coownership.is_own(ConcretePackage("extremetuxracer", "amd64"), "anthony"))
@@ -70,7 +70,7 @@ class CoownershipEditTestCase(unittest.TestCase):
 
     def setUp(self):
         self._coownership = CoownershipList()
-        self._coownership.import_from_xml("data/coownership1")
+        self._coownership.import_from_xml("data/coownership1-orig")
 
     def test_add(self):
         with self.assertRaises(UserAlreadyOwnsThisPackage):

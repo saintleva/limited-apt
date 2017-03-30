@@ -86,7 +86,7 @@ class CoownershipList:
     def export_to_xml(self, file):
         root = etree.Element("packages")
         for pkg, owners in sorted(self.__data.items(), key=lambda x: x[0]):
-            package_element = root.SubElement("package", name=pkg.name, arch=pkg.architecture)
+            package_element = etree.SubElement(root, "package", name=pkg.name, arch=pkg.architecture)
             for user in sorted(owners):
                 etree.SubElement(package_element, "user", name=user)
         tree = etree.ElementTree(root)        
@@ -106,9 +106,6 @@ class CoownershipList:
                 except (ValueError, LookupError) as err:
                     raise CoownershipImportSyntaxError("Syntax error has been appeared during importing "
                                                        "coownership table from xml: " + str(err))
-                    return False                 
-            return True 
         except etree.XMLSyntaxError as err:
             raise CoownershipImportSyntaxError('''Syntax error has been appeared during importing
                                                coownership table from xml: ''' + str(err))
-            return False
