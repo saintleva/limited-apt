@@ -130,7 +130,7 @@ class Runner:
     def acquire_progress(self):
         return self.__acquire_progress
     
-    @propery
+    @property
     def install_progress(self):
         return self.__install_progress
     
