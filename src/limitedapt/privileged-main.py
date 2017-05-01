@@ -23,12 +23,16 @@
 
 import sys
 import argparse
-import errors
-import runners
+import limitedapt.errors
+from limitedapt.runners import *
 from constants import *
 
 
+DEBUG = True
+
+
 def privileged_main():
+    
     # extract first program argument as id of real user
     try:
         user_id = int(sys.argv[1]) 
@@ -81,7 +85,7 @@ def privileged_main():
                                          help='''Simulate actions, but doesn't actually perform them. \
                                          This doesn't require high privileges (you may not to be a member \
                                          of "{0}" group).'''.format(UNIX_LIMITEDAPT_GROUPNAME))
-    parent_operation_parser.add_argument('-P', '--prompt', action='store_true',
+    parent_operation_parser.add_argument('-p', '--prompt', action='store_true',
                                          help='Always prompt for confirmation on actions.')
     parent_operation_parser.add_argument('-f', '--fatal-errors', action='store_true',
                                          help='Stop and exit after first error.')
@@ -92,24 +96,7 @@ def privileged_main():
                                   'unmarkauto' : 'Mark packages as having been manually installed by you.'}
     
     class InvalidOperation(Exception): pass
-    
-    class OperationPair:
-        
-        def __init__(self, command, package):
-            self._command = command
-            if len(package) == 0:
-                raise InvalidOperation('Error: invalid operation: package name is empty')
-            else:
-                self._package = package
-                
-        @property
-        def command(self):
-            return self._command
-    
-        @property
-        def package(self):
-            return self._package
-    
+       
     def unsuffix_operation(operation):
         if operation.endswith('+'):
             return OperationPair('install', operation[:-1])
@@ -139,7 +126,10 @@ def privileged_main():
     for operation, help in operation_subcommands_dict.items():
         operation_subcommand_parser = subparsers.add_parser(operation, parents=[parent_operation_parser],
                                                             help=help)
-        operation_subcommand_parser.add_argument('packages', nargs='*', metavar='pkg', help='a package')
+        operation_subcommand_parser.add_argument('packages', nargs='*', metavar='pkg', help='a package')        
+        if operation == "remove":
+            operation_subcommand_parser.add_argument("-P", '--purge-unused', action="store_true", 
+                                                     help="purge packages that is remove their configuration files")
 
     # Parse and analyse arguments
     
@@ -148,10 +138,11 @@ def privileged_main():
     simulate_mode = args.simulate if hasattr(args, 'simulate') else None
     prompt_mode = args.prompt if hasattr(args, 'prompt') else None
     fatal_errors_mode = args.fatal_errors if hasattr(args, 'fatal_errors') else None
-        
-    runner = runners.CommandRunner(user_id, args.show_arch, args.debug, args.verbose, simulate_mode, prompt_mode,
-                                   fatal_errors_mode)
+    purge_unused_mode = args.purge_unused if hasattr(args, 'purge_unused') else None
     
+    runner = Runner(user_id, Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode,
+                                   simulate_mode, prompt_mode, fatal_errors_mode))
+        
     try:
         if args.subcommand == 'update':
             runner.update()

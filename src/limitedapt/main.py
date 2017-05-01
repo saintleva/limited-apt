@@ -29,7 +29,7 @@ import subprocess
 PRIVILEGED_EXECUTABLE = '/usr/local/sbin/limited-apt_privileged'
 
 def main():
-    subprocess.call(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
+    subprocess.call(['/usr/bin/pkexec', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
     
     
 if __name__ == '__main__':

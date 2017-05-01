@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2015 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,7 +21,7 @@ import pwd
 import grp
 import os.path
 import apt
-import apt.apt_pkg
+import apt_pkg
 import apt.progress.base
 from limitedapt import exitcodes, constants, coownership
 from limitedapt.errors import StubError
@@ -54,13 +54,13 @@ class Modes:
     '''limited-apt application modes (options) incapsulation'''
     
     def __init__(self, show_arch, debug, verbose, purge_unused, simulate=None, prompt=None, fatal_errors=None):
-        __show_arch = show_arch
-        __debug = debug
-        __verbose = verbose
-        __purge_unused = purge_unused
-        __simulate = simulate
-        __prompt = prompt
-        __fatal_errors = fatal_errors
+        self.__show_arch = show_arch
+        self.__debug = debug
+        self.__verbose = verbose
+        self.__purge_unused = purge_unused
+        self.__simulate = simulate
+        self.__prompt = prompt
+        self.__fatal_errors = fatal_errors
         
     @property
     def show_arch(self):
@@ -426,7 +426,9 @@ class Runner:
                                    format(pkg.name), file=self.out_stream)                            
                 else:
                     print('''Warning: package "{0}" which you want to mark as manually installed is not installed'''.
-                          format(pkg.name), file=self.out_stream)                                            
+                          format(pkg.name), file=self.out_stream)       
+            finally:
+                pass                                     
         
         markauto_tasks = operation_tasks.get("markauto", [])
         #TODO: Implement good formatting of this message
@@ -438,7 +440,9 @@ class Runner:
                     pass
                 else:
                     print('''Warning: package "{0}" which you want to mark as automatically installed is not installed'''.
-                          format(pkg.name), file=self.out_stream)                                            
+                          format(pkg.name), file=self.out_stream)
+            finally:
+                pass                                      
                 
         self.__debug_message("you want to physically remove: " + installation_tasks)
         for package_name in physically_remove_tasks:
@@ -446,7 +450,7 @@ class Runner:
                 pkg = cache[package_name]
                 if username != "root":
                     print('''Error: you may not physically remove package "{0}" '''
-                          '''because only root may do that'''
+                          '''because only root may do that'''.
                            format(self.modes.package_str(pkg)), file=self.err_stream)
                 else:
                     try:
@@ -456,6 +460,8 @@ class Runner:
                             print('''No simple user has installed package "{0}" therefore physical removation '''
                                   '''is equivalent to simple removation in that case''', file=self.out_stream)
                     pkg.mark_delete(auto_fix=False, purge=False)
+            finally:
+                pass
                 
         self.__debug_message("you want to purge: " + purge_tasks)
         for package_name in purge_tasks:
@@ -472,3 +478,5 @@ class Runner:
                             print('''No simple user has installed package "{0}" therefore '''
                                   '''coownership list will not be changed''', file=self.out_stream)
                     pkg.mark_delete(auto_fix=False, purge=True)
+            finally:
+                pass
