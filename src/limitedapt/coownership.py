@@ -45,7 +45,7 @@ class CoownershipList:
         return self.__data.get(pkg, set())
     
     def his_packages(self, user):
-        return ( pkg for pkg, owners in self.__data.items() if user in owners )
+        return (pkg for pkg, owners in self.__data.items() if user in owners)
     
     def is_own(self, pkg, user):
         return user in self.__data[pkg] if pkg in self.__data else False

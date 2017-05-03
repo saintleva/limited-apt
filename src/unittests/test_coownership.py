@@ -24,30 +24,30 @@ from limitedapt.coownership import *
 class CoownershipTestCase1(unittest.TestCase):
 
     def setUp(self):
-        self._coownership = CoownershipList()
-        self._coownership.import_from_xml("data/coownership1-orig")
+        self.__coownership = CoownershipList()
+        self.__coownership.import_from_xml("data/coownership1-orig")
 
     def test_is_own(self):
-        self.assertTrue(self._coownership.is_own(ConcretePackage("extremetuxracer", "amd64"), "anthony"))
-        self.assertTrue(self._coownership.is_own(ConcretePackage("extremetuxracer", "amd64"), "galina"))
-        self.assertFalse(self._coownership.is_own(ConcretePackage("3dchess", "amd64"), "not-a-user"))
-        self.assertFalse(self._coownership.is_own(ConcretePackage("not-a-package", "not-an-arch"), "olduser1"))
+        self.assertTrue(self.__coownership.is_own(ConcretePackage("extremetuxracer", "amd64"), "anthony"))
+        self.assertTrue(self.__coownership.is_own(ConcretePackage("extremetuxracer", "amd64"), "galina"))
+        self.assertFalse(self.__coownership.is_own(ConcretePackage("3dchess", "amd64"), "not-a-user"))
+        self.assertFalse(self.__coownership.is_own(ConcretePackage("not-a-package", "not-an-arch"), "olduser1"))
 
     def test_sets(self):
-        owners1 = self._coownership.owners_of(ConcretePackage("extremetuxracer", "amd64"))
+        owners1 = self.__coownership.owners_of(ConcretePackage("extremetuxracer", "amd64"))
         self.assertSetEqual(owners1, {"1", "2", "4", "a", "anthony", "g", "galina", "henady", "hey"})
-        owners2 = self._coownership.owners_of(ConcretePackage("extremetuxracer", "i386"))
+        owners2 = self.__coownership.owners_of(ConcretePackage("extremetuxracer", "i386"))
         self.assertSetEqual(owners2, {"olduser1", "olduser2"})
     
     def test_no_owner(self):
-        owners = self._coownership.owners_of(ConcretePackage("nobody-own-me", "amd64"))
+        owners = self.__coownership.owners_of(ConcretePackage("nobody-own-me", "amd64"))
         self.assertSetEqual(owners, set())
 
     def test_his_packages(self):
-        self.assertSetEqual(set(self._coownership.his_packages("not-a-user")), set())
-        self.assertSetEqual(set(self._coownership.his_packages("root")),
+        self.assertSetEqual(set(self.__coownership.his_packages("not-a-user")), set())
+        self.assertSetEqual(set(self.__coownership.his_packages("root")),
                             { ConcretePackage("3dchess", "amd64") })
-        self.assertSetEqual(set(self._coownership.his_packages("anthony")),
+        self.assertSetEqual(set(self.__coownership.his_packages("anthony")),
                             { ConcretePackage("extremetuxracer", "amd64"),
                               ConcretePackage("python3-doc", "all"),
                               ConcretePackage("konsole", "armhf") })
@@ -56,46 +56,46 @@ class CoownershipTestCase1(unittest.TestCase):
 class CoownershipFileTestCase(unittest.TestCase):
  
     def test_file_dont_exist(self):
-        self._coownership = CoownershipList()
+        self.__coownership = CoownershipList()
         with self.assertRaises(OSError):
-            self._coownership.import_from_xml("data/not-a-file")        
+            self.__coownership.import_from_xml("data/not-a-file")        
             
     def test_file_invalid_syntax(self):
-        self._coownership = CoownershipList()
+        self.__coownership = CoownershipList()
         with self.assertRaises(CoownershipImportSyntaxError):
-            self._coownership.import_from_xml("data/abrakadabra")        
+            self.__coownership.import_from_xml("data/abrakadabra")        
             
 
 class CoownershipEditTestCase(unittest.TestCase):            
 
     def setUp(self):
-        self._coownership = CoownershipList()
-        self._coownership.import_from_xml("data/coownership1-orig")
+        self.__coownership = CoownershipList()
+        self.__coownership.import_from_xml("data/coownership1-orig")
 
     def test_add(self):
         with self.assertRaises(UserAlreadyOwnsThisPackage):
-            self._coownership.add_ownership(ConcretePackage("python3-doc", "all"), "anthony")
-        self._coownership.add_ownership(ConcretePackage("xterm", "i386"), "galina")
-        self.assertSetEqual(set(self._coownership.his_packages("galina")),
+            self.__coownership.add_ownership(ConcretePackage("python3-doc", "all"), "anthony")
+        self.__coownership.add_ownership(ConcretePackage("xterm", "i386"), "galina")
+        self.assertSetEqual(set(self.__coownership.his_packages("galina")),
                             { ConcretePackage("extremetuxracer", "amd64"),
                               ConcretePackage("xterm", "i386") })        
-        self._coownership.add_ownership(ConcretePackage("kate", "i386"), "anthony", True)        
-        self.assertTrue(self._coownership.is_own(ConcretePackage("kate", "i386"), "root"))
+        self.__coownership.add_ownership(ConcretePackage("kate", "i386"), "anthony", True)        
+        self.assertTrue(self.__coownership.is_own(ConcretePackage("kate", "i386"), "root"))
         
     def test_remove_ownership(self):
         with self.assertRaises(PackageIsNotInstalled):
-            self._coownership.remove_ownership(ConcretePackage("not-a-package", "not-an-arch"), "anthony")
+            self.__coownership.remove_ownership(ConcretePackage("not-a-package", "not-an-arch"), "anthony")
         with self.assertRaises(UserDoesNotOwnPackage):
-            self._coownership.remove_ownership(ConcretePackage("3dchess", "amd64"), "anthony")
-        self._coownership.remove_ownership(ConcretePackage("3dchess", "amd64"), "root2")
+            self.__coownership.remove_ownership(ConcretePackage("3dchess", "amd64"), "anthony")
+        self.__coownership.remove_ownership(ConcretePackage("3dchess", "amd64"), "root2")
         
-        self.assertFalse(self._coownership.is_own(ConcretePackage("3dchess", "amd64"), "root2"))
+        self.assertFalse(self.__coownership.is_own(ConcretePackage("3dchess", "amd64"), "root2"))
         
     def test_remove_package(self):
         with self.assertRaises(PackageIsNotInstalled):
-            self._coownership.remove_ownership(ConcretePackage("not-a-package", "not-an-arch"), "anthony")
-        self._coownership.remove_package(ConcretePackage("extremetuxracer", "amd64"))
-        owners = self._coownership.owners_of(ConcretePackage("extremetuxracer", "amd64"))
+            self.__coownership.remove_ownership(ConcretePackage("not-a-package", "not-an-arch"), "anthony")
+        self.__coownership.remove_package(ConcretePackage("extremetuxracer", "amd64"))
+        owners = self.__coownership.owners_of(ConcretePackage("extremetuxracer", "amd64"))
         self.assertSetEqual(owners, set())
         
 if __name__ == "__main__":

@@ -16,14 +16,11 @@
 #
 
 
-SOFTWARE_VERSION = '0.1a'
-PROGRAM_NAME = 'limited-apt'
-
 UNIX_LIMITEDAPT_GROUPNAME = 'limited-apt'
-UNIX_LIMITEDAPTROOTS_GROUPNAME = 'limited-apt-roots'
+UNIX_LIMITEDAPT_ROOTS_GROUPNAME = 'limited-apt-roots'
 
 def path_to_program_config(debug_mode):
     if debug_mode:
-        return '../tests/var'
+        return "/home/anthony/projects/limited-apt/src/tests/var/"
     else:
         return NotImplemented

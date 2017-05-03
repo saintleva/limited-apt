@@ -23,12 +23,18 @@
 
 import sys
 import argparse
-import limitedapt.errors
+import apt.progress.text
+import apt.progress.base
+from limitedapt.errors import StubError
 from limitedapt.runners import *
-from constants import *
+from limitedapt.constants import *
+import consoleui
 
 
 DEBUG = True
+
+SOFTWARE_VERSION = '0.1a'
+PROGRAM_NAME = 'limited-apt'
 
 
 def privileged_main():
@@ -127,8 +133,8 @@ def privileged_main():
         operation_subcommand_parser = subparsers.add_parser(operation, parents=[parent_operation_parser],
                                                             help=help)
         operation_subcommand_parser.add_argument('packages', nargs='*', metavar='pkg', help='a package')        
-        if operation == "remove":
-            operation_subcommand_parser.add_argument("-P", '--purge-unused', action="store_true", 
+        if operation == 'remove':
+            operation_subcommand_parser.add_argument('-P', '--purge-unused', action='store_true',
                                                      help="purge packages that is remove their configuration files")
 
     # Parse and analyse arguments
@@ -141,7 +147,9 @@ def privileged_main():
     purge_unused_mode = args.purge_unused if hasattr(args, 'purge_unused') else None
     
     runner = Runner(user_id, Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode,
-                                   simulate_mode, prompt_mode, fatal_errors_mode))
+                                   simulate_mode, prompt_mode, fatal_errors_mode), sys.stdout, sys.stderr,
+                    apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress(),
+                    consoleui.Applying, consoleui.terminate)
         
     try:
         if args.subcommand == 'update':
@@ -166,7 +174,7 @@ def privileged_main():
                 else:
                     operation_tasks[operation_pair.command] = [operation_pair.package]
             runner.perform_operations(operation_tasks)
-    except errors.StubError as err:
+    except StubError as err:
         print('It is a stub: ', err, file=sys.stderr)
         sys.exit(EXITCODE_STUB)
 

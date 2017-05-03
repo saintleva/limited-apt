@@ -66,7 +66,13 @@ class Modes:
     def show_arch(self):
         return self.__show_arch
     
-    def package_str(self, pkg):
+    def package_str(self, package):
+        cache = apt.Cache()
+        #TODO: Is it right?
+        try:
+            pkg = cache[str(package)]
+        except KeyError:
+            return str(package)
         return pkg.fullname if self.show_arch else pkg.name
         
     @property
@@ -76,6 +82,9 @@ class Modes:
     @property
     def verbose(self):
         return self.__verbose
+    
+    def wordy(self):
+        return self.debug or self.verbose
     
     @property
     def purge_unused(self):
@@ -103,7 +112,7 @@ class Runner:
         self.__err_stream = err_stream
         self.__acquire_progress = acquire_progress
         self.__install_progress = install_progress
-        self.__applying_ui = applying_ui
+        self.__applying_ui = applying_ui(modes)
         self.__termination = termination
         
         def effective_username(user_id):
@@ -111,7 +120,7 @@ class Runner:
                 return "root"
             name = pwd.getpwuid(user_id).pw_name
             return "root" if name == "root" or \
-                self.__is_belong_to_group(name, constants.UNIX_LIMITEDAPTROOTS_GROUPNAME) \
+                self.__is_belong_to_group(name, constants.UNIX_LIMITEDAPT_ROOTS_GROUPNAME) \
                 else name
         
         self.__username = effective_username(user_id)
@@ -166,7 +175,7 @@ class Runner:
     
     def __debug_message(self, message):
         if self.modes.debug:
-            print("Debug message: {0}".format(message))
+            print('Debug message: {0}'.format(message))
     
     def __is_belong_to_group(self, user_name, group_name):
         try:
@@ -179,17 +188,16 @@ class Runner:
     def __check_user_privileges(self):
         self.__has_privileges = self.username == "root" or \
             self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
-        self.__debug_message('''your username is: "{0}"'''.format(self.username))
-        self.__debug_message('''you has privileges for modification operations: "{0}"'''.
-                             format(self.has_privileges))
+        self.__debug_message('''your username is: "{0}"\n''' \
+                             '''you has privileges for modification operations: "{1}"'''.
+                             format(self.username, self.has_privileges))
         if self.modes.purge_unused and self.username != "root":
-            print('''Error: only root can purge packages and use "--purge-unused" option''',
-                  file=self.err_stream)
-            termination(exitcodes.YOU_HAVE_NOT_PRIVILEGES)
+            self.__print_error('''Error: only root can purge packages and use "--purge-unused" option''')
+            self.termination(exitcodes.YOU_HAVE_NOT_PRIVILEGES)
             
     #TODO: Do I really need it?
     def __load_program_options(self):
-        self.__default_release = apt.apt_pkg.config["APT::Default-Release"] or None
+        self.__default_release = apt_pkg.config["APT::Default-Release"] or None
     
     def update_eclosure(self):
         #TODO: Implement enclosure updating
@@ -207,7 +215,7 @@ class Runner:
         self.update_eclosure()
         
     def __load_coownership_list(self):
-        filename = os.path.join(constants.path_to_program_config(self.modes.debug), "coownership-list")
+        filename = os.path.join(constants.path_to_program_config(self.modes.debug), 'coownership-list')
         self.__debug_message('''loading list of package coownership (by users) from file "{0}" ...'''.
                              format(filename))
         try:
@@ -222,12 +230,12 @@ class Runner:
             self.termination(err.errno) #TODO: is it right?
 
     def __load_enclosure(self):
-        filename = os.path.join(constants.path_to_program_config(self.modes.debug), "enclosure")
+        filename = os.path.join(constants.path_to_program_config(self.modes.debug), 'enclosure')
         self.__debug_message('''loading non-system package set (enclosure) from file "{0}" ...'''.
                              format(filename))
         try:
             enclosure = Enclosure()
-            enclosure.load_from_file(filename)
+            enclosure.import_from_xml(filename)
             return enclosure 
         except EnclosureImportSyntaxError as err:
             self.__print_error(err)
@@ -237,26 +245,28 @@ class Runner:
             self.termination(err.errno) #TODO: is it right?
             
     def get_list_of_mine(self):
-        self.__load_coownership_list()
-        return sorted(self.__coownership_list.his_packages(self.username)) 
+        coownership_list = self.__load_coownership_list()               
+        return sorted(coownership_list.his_packages(self.username)) 
             
     def list_of_mine(self):
-        if self.modes.verbose or self.modes.debug:
-            print("Packages installed by you ({0}):".format(self.username), file=self.out_stream)                     
-        print(self.get_list_of_mine())
+        if self.modes.wordy():
+            self.__print_message('Packages installed by you ({0}):'.format(self.username))            
+        for package in self.get_list_of_mine():
+            print(self.modes.package_str(package), file=self.out_stream)
         
     def get_printed_enclosure(self):
         cache = apt.Cache()
         enclosure = self.__load_enclosure()
         # We don't need to sort packages because iterator of "Cache" class already returns
         # sorted sequence
-        return (self.package_str(pkg) for pkg in cache if
-                VersionedPackage(pkg.name, pkg.achitecture, pkg.candidate.version) in enclosure)
+        return (self.modes.package_str(pkg) for pkg in cache if pkg.candidate is not None and
+                VersionedPackage(pkg.name, pkg.architecture, pkg.candidate.version) in enclosure)
             
-    def print_enclosure(self):
-        if self.modes.verbose or self.modes.debug:
-            print("Ordinary user can install these packages:", file=self.out_stream)                     
-        print(self.get_list_of_mine())        
+    def print_enclosure(self, show_version_constraints):
+        if self.modes.wordy():
+            self.__print_message('Ordinary user can install these packages:')                     
+        for package in self.get_printed_enclosure():
+            print(self.modes.package_str(package), file=self.out_stream)
         
     def __examine_and_apply_changes(self, cache, enclosure, explicit_removes):
         changes = cache.get_changes()
