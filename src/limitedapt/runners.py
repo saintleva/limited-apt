@@ -270,7 +270,7 @@ class Runner:
         
     def __examine_and_apply_changes(self, cache, enclosure, explicit_removes):
         changes = cache.get_changes()
-        if self.modes.debug or self.modes.verbose:
+        if self.modes.wordy():
             print('You want to perform these factical changes:')
         self.applying_ui.show_changes(changes)
         
@@ -284,35 +284,33 @@ class Runner:
             for pkg in changes:
                 if (pkg.marked_install and
                     VersionedPackage(pkg.name, pkg.architecture, pkg.candidate.version) not in enclosure):
-                    print('''Error: you have not permissions to install package "{0}" because '''
-                          '''it is system-constitutive.'''.format(modes.package_str(pkg), file=self.err_stream))
+                    self.__print_error('''Error: you have not permissions to install package "{0}" because '''
+                                       '''it is system-constitutive.'''.format(modes.package_str(pkg)))
                     errors = True
                     if self.modes.fatal_errors:
                         break
                 if (pkg.marked_upgrade and
                     VersionedPackage(pkg.name, pkg.architecture, pkg.candidate.version) not in enclosure):
-                    print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" '''
-                          '''because this new version is system-constitutive.'''.
-                          format(modes.package_str(pkg), pkg.candidate.version), file=self.err_stream)
+                    self.__print_error('''Error: you have not permissions to upgrade package "{0}" to version "{1}" '''
+                                       '''because this new version is system-constitutive.'''.
+                                       format(modes.package_str(pkg), pkg.candidate.version))
                     errors = True
                     if self.modes.fatal_errors:
                         break
                 if pkg.marked_downgrade:
-                    print('''Error: you have not permissions to downgrade packages''', file=self.err_stream)
+                    self.__print_error('''Error: you have not permissions to downgrade packages''')
                     errors = True
                     if self.modes.fatal_errors:
                         break
                 if pkg.marked_keep:
-                    print('''Error: you have not permissions to keep packages at their current versions''',
-                          file=self.err_stream)
+                    self.__print_error('''Error: you have not permissions to keep packages at their current versions''')
                     errors = True
                     if self.modes.fatal_errors:
                         break
                 #TDOD: Is this logics right?
                 if pkg.marked_delete and pkg not in explicit_removes:
-                    print('''Error: you have not permissions to remove packages other than packages you '''
-                          '''has install later and want to explicitly remove''',
-                          file=self.err_stream)
+                    self.__print_error('''Error: you have not permissions to remove packages other than '''
+                                       '''packages you has install later and want to explicitly remove''')
                     errors = True
                     if self.modes.fatal_errors:
                         break
@@ -322,14 +320,14 @@ class Runner:
                     #TODO: Может быть я должен просматривать весь список origins?
                     origin = pkg.candidate.origins[0]                    
                     if self.default_release is not None and origin.archive != self.default_release:
-                        print('''Error: you have not permissions to install package from origin (suite) other '''
-                              '''that default ("{0}")'''.format(self.default_release), file=self.err_stream)
+                        self.__print_error('''Error: you have not permissions to install package from origin '''
+                                           '''(suite) other that default ("{0}")'''.format(self.default_release))
                         errors = True            
                         if self.modes.fatal_errors:
-                            break                        
+                            break   
+                    #TODO: Действительно ли я должен проверять это?                     
                     if not origin.trusted:
-                        print('''Error: package "{0}" is not trusted".'''.format(modes.package_str(pkg)),
-                              file=sys.stderr)
+                        self.__print_error('''Error: package "{0}" is not trusted".'''.format(modes.package_str(pkg)))
                         errors = True            
                         if self._fatal_errors_mode:
                             break
