@@ -19,8 +19,10 @@
 UNIX_LIMITEDAPT_GROUPNAME = 'limited-apt'
 UNIX_LIMITEDAPT_ROOTS_GROUPNAME = 'limited-apt-roots'
 
-def path_to_program_config(debug_mode):
-    if debug_mode:
+DEBUG = True
+
+def path_to_program_config():
+    if DEBUG:
         return "/home/anthony/projects/limited-apt/src/tests/var/"
     else:
         return NotImplemented

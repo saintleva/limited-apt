@@ -87,10 +87,14 @@ class ArchAndVersions:
         if self.isevery:
             return version in self.every
         else:
+            #TODO: Is it right?
             try:
                 return version in self.__data[arch]
             except KeyError:
-                return False
+                try:
+                    return version in self.__data["all"]
+                except KeyError:
+                    return False                    
             
     def add(self, versions, arch=None):        
         if self.every:

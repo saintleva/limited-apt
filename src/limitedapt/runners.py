@@ -53,7 +53,7 @@ class OperationPair:
 class Modes:
     '''limited-apt application modes (options) incapsulation'''
     
-    def __init__(self, show_arch, debug, verbose, purge_unused, simulate=None, prompt=None, fatal_errors=None):
+    def __init__(self, show_arch, debug, verbose, purge_unused, simulate=False, prompt=False, fatal_errors=False):
         self.__show_arch = show_arch
         self.__debug = debug
         self.__verbose = verbose
@@ -66,9 +66,7 @@ class Modes:
     def show_arch(self):
         return self.__show_arch
     
-    def package_str(self, package):
-        cache = apt.Cache()
-        #TODO: Is it right?
+    def package_str(self, cache, package):
         try:
             pkg = cache[str(package)]
         except KeyError:
@@ -102,6 +100,16 @@ class Modes:
     def fatal_errors(self):
         return self.__fatal_errors
       
+
+def list_to_str(items):
+    result = ""
+    is_first = True
+    for item in items:
+        if not is_first:
+            result += ", "            
+        result += str(item)
+        is_first = False
+    return result
 
 class Runner:
     
@@ -188,7 +196,7 @@ class Runner:
     def __check_user_privileges(self):
         self.__has_privileges = self.username == "root" or \
             self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
-        self.__debug_message('''your username is: "{0}"\n''' \
+        self.__debug_message('''your username is: "{0}", ''' \
                              '''you has privileges for modification operations: "{1}"'''.
                              format(self.username, self.has_privileges))
         if self.modes.purge_unused and self.username != "root":
@@ -215,7 +223,7 @@ class Runner:
         self.update_eclosure()
         
     def __load_coownership_list(self):
-        filename = os.path.join(constants.path_to_program_config(self.modes.debug), 'coownership-list')
+        filename = os.path.join(constants.path_to_program_config(), 'coownership-list')
         self.__debug_message('''loading list of package coownership (by users) from file "{0}" ...'''.
                              format(filename))
         try:
@@ -230,7 +238,7 @@ class Runner:
             self.termination(err.errno) #TODO: is it right?
 
     def __load_enclosure(self):
-        filename = os.path.join(constants.path_to_program_config(self.modes.debug), 'enclosure')
+        filename = os.path.join(constants.path_to_program_config(), 'enclosure')
         self.__debug_message('''loading non-system package set (enclosure) from file "{0}" ...'''.
                              format(filename))
         try:
@@ -249,29 +257,30 @@ class Runner:
         return sorted(coownership_list.his_packages(self.username)) 
             
     def list_of_mine(self):
+        cache = apt.Cache()
         if self.modes.wordy():
             self.__print_message('Packages installed by you ({0}):'.format(self.username))            
         for package in self.get_list_of_mine():
-            print(self.modes.package_str(package), file=self.out_stream)
+            print(self.modes.package_str(cache, package), file=self.out_stream)
         
     def get_printed_enclosure(self):
         cache = apt.Cache()
         enclosure = self.__load_enclosure()
+        
         # We don't need to sort packages because iterator of "Cache" class already returns
         # sorted sequence
-        return (self.modes.package_str(pkg) for pkg in cache if pkg.candidate is not None and
-                VersionedPackage(pkg.name, pkg.architecture, pkg.candidate.version) in enclosure)
-            
+        return (self.modes.package_str(cache, pkg) for pkg in cache if pkg.candidate is not None and
+                VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version) in enclosure)
+                    
     def print_enclosure(self, show_version_constraints):
+        cache = apt.Cache()
         if self.modes.wordy():
             self.__print_message('Ordinary user can install these packages:')                     
         for package in self.get_printed_enclosure():
-            print(self.modes.package_str(package), file=self.out_stream)
+            print(self.modes.package_str(cache, package), file=self.out_stream)
         
     def __examine_and_apply_changes(self, cache, enclosure, explicit_removes):
         changes = cache.get_changes()
-        if self.modes.wordy():
-            print('You want to perform these factical changes:')
         self.applying_ui.show_changes(changes)
         
         if self.username == "root":
@@ -282,18 +291,17 @@ class Runner:
         else:
             errors = False
             for pkg in changes:
-                if (pkg.marked_install and
-                    VersionedPackage(pkg.name, pkg.architecture, pkg.candidate.version) not in enclosure):
+                versioned_package = VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version)
+                if (pkg.marked_install and versioned_package not in enclosure):
                     self.__print_error('''Error: you have not permissions to install package "{0}" because '''
-                                       '''it is system-constitutive.'''.format(modes.package_str(pkg)))
+                                       '''it is system-constitutive.'''.format(self.modes.package_str(pkg)))
                     errors = True
                     if self.modes.fatal_errors:
                         break
-                if (pkg.marked_upgrade and
-                    VersionedPackage(pkg.name, pkg.architecture, pkg.candidate.version) not in enclosure):
+                if (pkg.marked_upgrade and versioned_package not in enclosure):
                     self.__print_error('''Error: you have not permissions to upgrade package "{0}" to version "{1}" '''
                                        '''because this new version is system-constitutive.'''.
-                                       format(modes.package_str(pkg), pkg.candidate.version))
+                                       format(self.modes.package_str(pkg), pkg.candidate.version))
                     errors = True
                     if self.modes.fatal_errors:
                         break
@@ -314,28 +322,28 @@ class Runner:
                     errors = True
                     if self.modes.fatal_errors:
                         break
-                is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or 
-                                      pkg.marked_upgrade or pkg.marked_downgrade)
-                if is_setup_operation:
-                    #TODO: Может быть я должен просматривать весь список origins?
-                    origin = pkg.candidate.origins[0]                    
-                    if self.default_release is not None and origin.archive != self.default_release:
-                        self.__print_error('''Error: you have not permissions to install package from origin '''
-                                           '''(suite) other that default ("{0}")'''.format(self.default_release))
-                        errors = True            
-                        if self.modes.fatal_errors:
-                            break   
-                    #TODO: Действительно ли я должен проверять это?                     
-                    if not origin.trusted:
-                        self.__print_error('''Error: package "{0}" is not trusted".'''.format(modes.package_str(pkg)))
-                        errors = True            
-                        if self._fatal_errors_mode:
-                            break
+#                 is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or 
+#                                       pkg.marked_upgrade or pkg.marked_downgrade)
+#                 if is_setup_operation:
+#                     #TODO: Может быть я должен просматривать весь список origins?
+#                     origin = pkg.candidate.origins[0]                    
+#                     if self.default_release is not None and origin.archive != self.default_release:
+#                         self.__print_error('''Error: you have not permissions to install package from origin '''
+#                                            '''(suite) other that default ("{0}")'''.format(self.default_release))
+#                         errors = True            
+#                         if self.modes.fatal_errors:
+#                             break   
+#                     #TODO: Действительно ли я должен проверять это?                     
+#                     if not origin.trusted:
+#                         self.__print_error('''Error: package "{0}" is not trusted".'''.format(modes.package_str(pkg)))
+#                         errors = True            
+#                         if self._fatal_errors_mode:
+#                             break
             if errors:
                 self.termination(exitcodes.ATTEMPT_TO_PERFORM_SYSTEM_COMPOSING)
          
-        agree = self.applying_ui.prompt_agree() if self.modes.prompt else True
-        if agree:
+#        agree = self.applying_ui.prompt_agree() if self.modes.prompt else True
+        if self.applying_ui.prompt_agree():
             try:
                 cache.commit(self.acquire_progress, self.install_progress)
             except apt.cache.LockFailedException as err:
@@ -360,7 +368,7 @@ class Runner:
         cache.upgrade(full_upgrade)
         self.__examine_and_apply_changes(cache, enclosure, {})        
               
-    def perform_operations(self, operation_tasks, acquire_progress):
+    def perform_operations(self, operation_tasks):
         if not self.has_privileges:
             self.__print_error('''Error: you have not privileges to perform these operations: '''
                                '''you must be root or a member of "{0}" group'''.
@@ -377,19 +385,20 @@ class Runner:
             
         installation_tasks = operation_tasks.get("install", [])
         #TODO: Implement good formatting of this message
-        self.__debug_message("you want to install: " + installation_tasks)
+        self.__debug_message("you want to install: " + list_to_str(installation_tasks))
         for package_name in installation_tasks:
             try:
                 pkg = cache[package_name]
+                #TODO: Is it correct?
+                versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
                 if pkg.is_installed:
-                    can_upgrade = VersionedPackage(pkg.shortname, pkg.architecture, pkg.version) in enclosure and pkg.is_upgradable
+                    can_upgrade = versioned_package in enclosure and pkg.is_upgradable
                     if pkg.is_auto_installed:
-                        if VersionedPackage(pkg.shortname, pkg.architecture, pkg.version) in enclosure:
+                        if versioned_package in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
                             # if installed package marked 'automatically installed' nobody owns it.
                             # Also we don't add "root" to this package owners for the same reason.
-                            coownership.add_ownership(ConcretePackage(pkg.shortname, pkg.architecture),
-                                                      self.username())
+                            coownership.add_ownership(versioned_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
                             print('''Error: package "{0}" which you want to install is system and'''
@@ -397,14 +406,12 @@ class Runner:
                                    format(pkg.name), file=self.out_stream)                            
                     else:
                         try:
-                            coownership.add_ownership(ConcretePackage(pkg.shortname, pkg.architecture),
-                                                      self.username(), also_root=True)                            
+                            coownership.add_ownership(versioned_package, self.username, also_root=True)                            
                         except UserAlreadyOwnsThisPackage as err:
                             print(err, self.out_stream)
                 else:
-                    if VersionedPackage(pkg.shortname, pkg.architecture, pkg.version) in enclosure or self.username() == "root":
-                        coownership.add_ownership(ConcretePackage(pkg.shortname, pkg.architecture),
-                                                  self.username(), also_root=True)
+                    if versioned_package in enclosure or self.username == "root":
+                        coownership.add_ownership(versioned_package, self.username, also_root=True)
                         pkg.mark_install()
                     else:
                         print('''Error: package "{0}" which you want to install is system-constitutive '''
@@ -415,18 +422,17 @@ class Runner:
                 
         unmarkauto_tasks = operation_tasks.get("unmarkauto", [])
         #TODO: Implement good formatting of this message
-        self.__debug_message("you want to unmarkauto: " + unmarkauto_tasks)
+        self.__debug_message("you want to unmarkauto: " + list_to_str(unmarkauto_tasks))
         for package_name in unmarkauto_tasks:
             try:
                 pkg = cache[package_name]
                 if pkg.is_installed:
                     if pkg.is_auto_installed:
-                        if VersionedPackage(pkg.shortname, pkg.architecture, pkg.version) in enclosure:
+                        if versioned_package in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
                             # if installed package marked 'automatically installed' nobody owns it.
                             # Also we don't add "root" to this package owners for the same reason.
-                            coownership.add_ownership(ConcretePackage(pkg.shortname, pkg.architecture),
-                                                      self.username())
+                            coownership.add_ownership(versioned_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
                             print('''Error: package "{0}" which you want to install is system and'''
@@ -440,7 +446,7 @@ class Runner:
         
         markauto_tasks = operation_tasks.get("markauto", [])
         #TODO: Implement good formatting of this message
-        self.__debug_message("you want to markauto: " + markauto_tasks)
+        self.__debug_message("you want to markauto: " + list_to_str(markauto_tasks))
         for package_name in markauto_tasks:
             try:
                 pkg = cache[package_name]
@@ -452,17 +458,18 @@ class Runner:
             finally:
                 pass                                      
                 
-        self.__debug_message("you want to physically remove: " + installation_tasks)
+        physically_remove_tasks = operation_tasks.get("markauto", [])
+        self.__debug_message("you want to physically remove: " + list_to_str(physically_remove_tasks))
         for package_name in physically_remove_tasks:
             try:
                 pkg = cache[package_name]
-                if username != "root":
+                if self.username != "root":
                     print('''Error: you may not physically remove package "{0}" '''
                           '''because only root may do that'''.
                            format(self.modes.package_str(pkg)), file=self.err_stream)
                 else:
                     try:
-                        coownership.remove_package()
+                        coownership.remove_package(package_name)
                     except PackageIsNotInstalled:
                         if self.modes.verbose:
                             print('''No simple user has installed package "{0}" therefore physical removation '''
@@ -471,20 +478,21 @@ class Runner:
             finally:
                 pass
                 
-        self.__debug_message("you want to purge: " + purge_tasks)
-        for package_name in purge_tasks:
-            try:
-                pkg = cache[package_name]
-                if username != "root":
-                    print('''Error: you may not purge package "{0}" because only root may do that'''.
-                          format(self.modes.package_str(pkg)), file=self.err_stream)
-                else:
-                    try:
-                        coownership.remove_package()
-                    except PackageIsNotInstalled:
-                        if self.modes.verbose:
-                            print('''No simple user has installed package "{0}" therefore '''
-                                  '''coownership list will not be changed''', file=self.out_stream)
-                    pkg.mark_delete(auto_fix=False, purge=True)
-            finally:
-                pass
+#         self.__debug_message("you want to purge: " + purge_tasks)
+#         for package_name in purge_tasks:
+#             try:
+#                 pkg = cache[package_name]
+#                 if username != "root":
+#                     print('''Error: you may not purge package "{0}" because only root may do that'''.
+#                           format(self.modes.package_str(pkg)), file=self.err_stream)
+#                 else:
+#                     try:
+#                         coownership.remove_package()
+#                     except PackageIsNotInstalled:
+#                         if self.modes.verbose:
+#                             print('''No simple user has installed package "{0}" therefore '''
+#                                   '''coownership list will not be changed''', file=self.out_stream)
+#                     pkg.mark_delete(auto_fix=False, purge=True)
+#             finally:
+#                 pass
+        self.__examine_and_apply_changes(cache, enclosure, {})        

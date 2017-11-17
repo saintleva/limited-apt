@@ -65,18 +65,28 @@ class Applying:
                 if line != '  ':
                     print(line)
             
-            print_onetype_operation_package_list(lambda pkg: pkg.marked_install,
-                                                 'These new packages will be installed:')
-            print_onetype_operation_package_list(lambda pkg: pkg.marked_upgrade and not pkg.marked_install,
-                                                 'These packages will be upgraded:')
-            print_onetype_operation_package_list(lambda pkg: pkg.marked_reinstall,
-                                                 'These packages will be reinstalled:')
-            print_onetype_operation_package_list(lambda pkg: pkg.marked_downgrade,
-                                                 'These packages will be downgraded:')
-            print_onetype_operation_package_list(lambda pkg: pkg.marked_delete,
-                                                 'These packages will be removed:')
-            print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
-                                                 'These packages will be kept at they current version:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_install,
+                                             'These new packages will be installed:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_upgrade and not pkg.marked_install,
+                                             'These packages will be upgraded:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_reinstall,
+                                             'These packages will be reinstalled:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_downgrade,
+                                             'These packages will be downgraded:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_delete,
+                                             'These packages will be removed:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
+                                             'These packages will be kept at they current version:')
+    
+    def prompt_agree(self):
+        while True:
+            print('Are you want to countinue? [Y/n]')
+            answer = input()
+            if answer == '' or answer.startswith('Y') or answer.startswith('y'):
+                return True
+            if answer.startswith('N') or answer.startswith('n'):
+                return False 
+            print('Incorrect answer.')
 
 def terminate(exitcode):
     sys.exit(exitcode)

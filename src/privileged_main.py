@@ -21,6 +21,8 @@
 # THE SOFTWARE.
 
 
+import os
+
 import sys
 import argparse
 import apt.progress.text
@@ -28,6 +30,7 @@ import apt.progress.base
 from limitedapt.errors import StubError
 from limitedapt.runners import *
 from limitedapt.constants import *
+from limitedapt import exitcodes
 import consoleui
 
 
@@ -39,12 +42,14 @@ PROGRAM_NAME = 'limited-apt'
 
 def privileged_main():
     
+    print('UID = {0}, EUID = {1}'.format(os.getuid(), os.geteuid()))
+    
     # extract first program argument as id of real user
     try:
         user_id = int(sys.argv[1]) 
     except:
         print('This privileged script has been run incorrectly', file=sys.stderr)
-        sys.exit(EXITCODE_PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
+        sys.exit(exitcodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
         
     # Create parser
     
@@ -176,7 +181,7 @@ def privileged_main():
             runner.perform_operations(operation_tasks)
     except StubError as err:
         print('It is a stub: ', err, file=sys.stderr)
-        sys.exit(EXITCODE_STUB)
+        sys.exit(exitcodes.STUB)
 
 
 if __name__ == '__main__':

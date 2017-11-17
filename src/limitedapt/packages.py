@@ -57,3 +57,6 @@ class VersionedPackage(ConcretePackage):
     @property
     def version(self):
         return self.__version
+
+    def __str__(self):
+        return "{0} : {1} : {2}".format(self.name, self.architecture, self.version)
