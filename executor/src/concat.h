@@ -5,7 +5,7 @@
 #include <string>
 
 
-std::string getCommandLine(const std::string& executableName, uid_t userID, int paramCount, char** params)
+//std::string getCommandLine(const std::string& executableName, uid_t userID, int paramCount, char** params)
 
 
 #endif //__LIMITEDAPT_EXECUTOR_CONCAT_H__

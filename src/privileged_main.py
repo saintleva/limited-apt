@@ -42,7 +42,10 @@ PROGRAM_NAME = 'limited-apt'
 
 def privileged_main():
     
+    #TODO: remove it:
+    print("privileged_main():")
     print('UID = {0}, EUID = {1}'.format(os.getuid(), os.geteuid()))
+    print()
     
     # extract first program argument as id of real user
     try:

@@ -236,6 +236,19 @@ class Runner:
         except IOError as err:
             self.__print_error(err)
             self.termination(err.errno) #TODO: is it right?
+            
+    def __save_coownership_list(self, coownership_list):
+        filename = os.path.join(constants.path_to_program_config(), 'coownership-list')
+        self.__debug_message('''save list of package coownership (by users) to file "{0}" ...'''.
+                             format(filename))
+        try:
+            coownership_list.export_to_xml(filename)
+#         except CoownershipImportSyntaxError as err:
+#             self.__print_error(err)
+#             self.termination(exitcodes.ERROR_WHILE_PARSING_CONFIG_FILES)
+        except IOError as err:
+            self.__print_error(err)
+            self.termination(err.errno) #TODO: is it right?
 
     def __load_enclosure(self):
         filename = os.path.join(constants.path_to_program_config(), 'enclosure')
@@ -322,6 +335,10 @@ class Runner:
                     errors = True
                     if self.modes.fatal_errors:
                         break
+                    
+                #TODO: Also process "unmarkauto" !
+                addend = [pkg.name]
+                    
 #                 is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or 
 #                                       pkg.marked_upgrade or pkg.marked_downgrade)
 #                 if is_setup_operation:
@@ -496,3 +513,5 @@ class Runner:
 #             finally:
 #                 pass
         self.__examine_and_apply_changes(cache, enclosure, {})        
+        
+        self.__save_coownership_list(coownership)

@@ -1,6 +1,9 @@
 #include <cstdlib>
 #include <iostream>
 #include <sstream>
+
+#include <boost/format.hpp>
+
 #include <unistd.h>
 //#include <cstdlib>
 
@@ -16,7 +19,7 @@ string getCommandLine(const string& executableName, uid_t userID, int paramCount
     return result.str();
 }
 
-const string executableFilename = "limited-apt_privileged";
+const string executableFilename = "/usr/local/sbin/limited-apt_privileged";
 
 //string getExecutablePath()
 //{
@@ -34,9 +37,14 @@ int main(int argc, char** argv)
 //    std::cout << "Real UID = " << getuid() << "\n";
 //    std::cout << getCommandLine(executableFilename, getuid(), argc - 1, argv + 1) << "\n";
 
-    std::cout << geteuid() << "\n";
+    std::cout << boost::format("UID = %1%, EUID = %2%\n") % getuid() % geteuid();
+
+//    std::cout << "SUID == " <<  << "EUID == " << geteuid() << "\n";
 
     string cmdLine = getCommandLine(executableFilename, getuid(), argc - 1, argv + 1);
+
+    std::cout << cmdLine << "\n";
+
     system(cmdLine.c_str());
 
     return 0;
