@@ -307,14 +307,14 @@ class Runner:
                 versioned_package = VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version)
                 if (pkg.marked_install and versioned_package not in enclosure):
                     self.__print_error('''Error: you have not permissions to install package "{0}" because '''
-                                       '''it is system-constitutive.'''.format(self.modes.package_str(pkg)))
+                                       '''it is system-constitutive.'''.format(self.modes.package_str(cache, pkg)))
                     errors = True
                     if self.modes.fatal_errors:
                         break
                 if (pkg.marked_upgrade and versioned_package not in enclosure):
                     self.__print_error('''Error: you have not permissions to upgrade package "{0}" to version "{1}" '''
                                        '''because this new version is system-constitutive.'''.
-                                       format(self.modes.package_str(pkg), pkg.candidate.version))
+                                       format(self.modes.package_str(cache, pkg), pkg.candidate.version))
                     errors = True
                     if self.modes.fatal_errors:
                         break

@@ -1,22 +1,32 @@
-#include <cstdlib>
 #include <iostream>
-#include <sstream>
-
+//#include <sstream>
 #include <boost/format.hpp>
-
+#include <cstring>
+#include <string>
 #include <unistd.h>
-//#include <cstdlib>
 
 using std::string;
 
 
-string getCommandLine(const string& executableName, uid_t userID, int paramCount, char** params)
+//string getCommandLine(const string& executableName, uid_t userID, int paramCount, char** params)
+//{
+//    std::ostringstream result;
+//    result << executableName << " " << userID;
+//    for (int i = 0; i < paramCount; ++i)
+//        result << " " << params[i];
+//    return result.str();
+//}
+
+char* strToCString(const char* source)
 {
-    std::ostringstream result;
-    result << executableName << " " << userID;
-    for (int i = 0; i < paramCount; ++i)
-        result << " " << params[i];
-    return result.str();
+    auto dest = new char[std::strlen(source) + 1];
+    std::strcpy(dest, source);
+    return dest;
+}
+
+char* strToCString(const string& source)
+{
+    return strToCString(source.c_str());
 }
 
 const string executableFilename = "/usr/local/sbin/limited-apt_privileged";
@@ -32,20 +42,30 @@ const string executableFilename = "/usr/local/sbin/limited-apt_privileged";
 //
 //constexpr string& EXECUTABLE = "/usr/";
 
-int main(int argc, char** argv)
+int main(int argc, char* argv[])
 {
-//    std::cout << "Real UID = " << getuid() << "\n";
-//    std::cout << getCommandLine(executableFilename, getuid(), argc - 1, argv + 1) << "\n";
-
     std::cout << boost::format("UID = %1%, EUID = %2%\n") % getuid() % geteuid();
 
-//    std::cout << "SUID == " <<  << "EUID == " << geteuid() << "\n";
+//    string cmdLine = getCommandLine(executableFilename, getuid(), argc - 1, argv + 1);
+//    std::cout << cmdLine << "\n";
 
-    string cmdLine = getCommandLine(executableFilename, getuid(), argc - 1, argv + 1);
+    auto arguments = new char*[argc + 2];
 
-    std::cout << cmdLine << "\n";
+    arguments[0] = strToCString(executableFilename);
+    auto user = std::to_string(getuid());
+    arguments[1] = strToCString(user);
 
-    system(cmdLine.c_str());
+    for (int i = 1; i <= argc - 1; ++i)
+        arguments[i + 1] = strToCString(argv[i]);
+    arguments[argc + 1] = nullptr;
+
+    execv(executableFilename.c_str(), arguments);
+
+    for (int i = 0; i <= argc; ++i)
+        delete arguments[i];
+    delete[] arguments;
+
+    std::cout << "FINISHED\n";
 
     return 0;
 }
