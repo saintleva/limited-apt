@@ -30,10 +30,12 @@ PRIVILEGED_EXECUTABLE = '/usr/local/sbin/limited-apt_privileged'
 
 def main():
     
-    print("main():")
-    print('UID = {0}, EUID = {1}'.format(os.getuid(), os.geteuid()))
-    print()
-    
+    #TODO: remove it
+#     print("main():")
+#     print('UID = {0}, EUID = {1}'.format(os.getuid(), os.geteuid()))
+#     print()
+
+    #TODO: move to right executor    
     subprocess.call(['sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
 #    subprocess.call(['executor'] + sys.argv[1:])
     

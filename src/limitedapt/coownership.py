@@ -51,7 +51,10 @@ class CoownershipList:
         return user in self.__data[pkg] if pkg in self.__data else False
     
     def add_ownership(self, pkg, user, also_root=False):
-        #TODO: Is tis logics good? 
+        #TODO: remove it
+        print("ADD OWNERSHIP: {0} {1}".format(user, pkg))
+        
+        #TODO: Is it logics good? 
         if pkg in self.__data:
             if user in self.__data[pkg]:
                 raise UserAlreadyOwnsThisPackage("User '{0} has already own package '{1}".format(user, pkg))
@@ -84,6 +87,14 @@ class CoownershipList:
         self.__data.clear()
         
     def export_to_xml(self, file):
+        #TODO: remove it
+        print("EXPORT:")
+        for pkg, owners in sorted(self.__data.items(), key=lambda x: x[0]):
+            print(pkg)
+            for user in sorted(owners):
+                print("  " + user)
+        print()
+        
         root = etree.Element("packages")
         for pkg, owners in sorted(self.__data.items(), key=lambda x: x[0]):
             package_element = etree.SubElement(root, "package", name=pkg.name, arch=pkg.architecture)

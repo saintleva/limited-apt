@@ -408,6 +408,7 @@ class Runner:
                 pkg = cache[package_name]
                 #TODO: Is it correct?
                 versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
+                concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
                 if pkg.is_installed:
                     can_upgrade = versioned_package in enclosure and pkg.is_upgradable
                     if pkg.is_auto_installed:
@@ -415,7 +416,7 @@ class Runner:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
                             # if installed package marked 'automatically installed' nobody owns it.
                             # Also we don't add "root" to this package owners for the same reason.
-                            coownership.add_ownership(versioned_package, self.username)
+                            coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
                             print('''Error: package "{0}" which you want to install is system and'''
@@ -423,17 +424,17 @@ class Runner:
                                    format(pkg.name), file=self.out_stream)                            
                     else:
                         try:
-                            coownership.add_ownership(versioned_package, self.username, also_root=True)                            
-                        except UserAlreadyOwnsThisPackage as err:
-                            print(err, self.out_stream)
+                            coownership.add_ownership(concrete_package, self.username, also_root=True)                            
+                        except UserAlreadyOwnsThisPackage:
+                            print('''You already own package "{0}"'''.format(concrete_package))
                 else:
                     if versioned_package in enclosure or self.username == "root":
-                        coownership.add_ownership(versioned_package, self.username, also_root=True)
+                        coownership.add_ownership(concrete_package, self.username, also_root=True)
                         pkg.mark_install()
                     else:
                         print('''Error: package "{0}" which you want to install is system-constitutive '''
                               '''and nobody but root may install it'''.
-                               format(pkg.name), file=self.out_stream)                        
+                               format(pkg.name), file=self.out_stream)
             except KeyError:
                 show_cannot_find_package(package_name)
                 
@@ -449,7 +450,7 @@ class Runner:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
                             # if installed package marked 'automatically installed' nobody owns it.
                             # Also we don't add "root" to this package owners for the same reason.
-                            coownership.add_ownership(versioned_package, self.username)
+                            coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
                             print('''Error: package "{0}" which you want to install is system and'''
