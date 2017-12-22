@@ -99,7 +99,27 @@ class Modes:
     @property
     def fatal_errors(self):
         return self.__fatal_errors
-      
+  
+    
+class Progresses:
+    
+    def __init__(self, fetch, acquire, install):   
+        self.__fetch = fetch
+        self.__acquire = acquire
+        self.__install = install
+        
+    @property
+    def fetch(self):
+        return self.__fetch
+
+    @property
+    def acquire(self):
+        return self.__acquire
+
+    @property
+    def install(self):
+        return self.__install
+    
 
 def list_to_str(items):
     result = ""
@@ -113,13 +133,11 @@ def list_to_str(items):
 
 class Runner:
     
-    def __init__(self, user_id, modes, out_stream, err_stream, 
-                 acquire_progress, install_progress, applying_ui, termination):
+    def __init__(self, user_id, modes, out_stream, err_stream, progresses, applying_ui, termination):
         self.__modes = modes
         self.__out_stream = out_stream
         self.__err_stream = err_stream
-        self.__acquire_progress = acquire_progress
-        self.__install_progress = install_progress
+        self.__progresses = progresses
         self.__applying_ui = applying_ui(modes)
         self.__termination = termination
         
@@ -144,12 +162,8 @@ class Runner:
         return self.__out_stream
     
     @property
-    def acquire_progress(self):
-        return self.__acquire_progress
-    
-    @property
-    def install_progress(self):
-        return self.__install_progress
+    def progresses(self):
+        return self.__progresses
     
     @property
     def err_stream(self):
@@ -218,7 +232,7 @@ class Runner:
                                format(constants.UNIX_LIMITEDAPT_GROUPNAME))
             self.termination(exitcodes.YOU_HAVE_NOT_PRIVILEGES)
         cache = apt.Cache()
-        cache.update()
+        cache.update(self.progresses.fetch)
         cache.open(None) #TODO: Do I really need to re-open the cache here?    
         self.update_eclosure()
         
@@ -295,6 +309,8 @@ class Runner:
     def __examine_and_apply_changes(self, cache, enclosure, explicit_removes):
         changes = cache.get_changes()
         self.applying_ui.show_changes(changes)
+        if not changes:
+            self.termination(exitcodes.GOOD)
         
         if self.username == "root":
             if self.modes.purge_unused:
@@ -362,7 +378,7 @@ class Runner:
 #        agree = self.applying_ui.prompt_agree() if self.modes.prompt else True
         if self.applying_ui.prompt_agree():
             try:
-                cache.commit(self.acquire_progress, self.install_progress)
+                cache.commit(self.progresses.acquire, self.progresses.install)
             except apt.cache.LockFailedException as err:
                 #TODO: process this exception 
                 print('CANNOT LOCK: ', err, file=self.err_stream)

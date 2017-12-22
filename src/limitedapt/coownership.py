@@ -51,9 +51,6 @@ class CoownershipList:
         return user in self.__data[pkg] if pkg in self.__data else False
     
     def add_ownership(self, pkg, user, also_root=False):
-        #TODO: remove it
-        print("ADD OWNERSHIP: {0} {1}".format(user, pkg))
-        
         #TODO: Is it logics good? 
         if pkg in self.__data:
             if user in self.__data[pkg]:

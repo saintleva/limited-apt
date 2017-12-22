@@ -15,7 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-
+GOOD = 0
 YOU_HAVE_NOT_PRIVILEGES = 10
 ATTEMPT_TO_PERFORM_SYSTEM_COMPOSING = 11
 YOU_ARE_NOT_COOWNER_OF_PACKAGE = 12

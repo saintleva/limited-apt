@@ -25,6 +25,7 @@ import os
 
 import sys
 import argparse
+import apt.progress
 import apt.progress.text
 import apt.progress.base
 from limitedapt.errors import StubError
@@ -155,19 +156,21 @@ def privileged_main():
     prompt_mode = args.prompt if hasattr(args, 'prompt') else None
     fatal_errors_mode = args.fatal_errors if hasattr(args, 'fatal_errors') else None
     purge_unused_mode = args.purge_unused if hasattr(args, 'purge_unused') else None
-    
-    runner = Runner(user_id, Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode,
-                                   simulate_mode, prompt_mode, fatal_errors_mode), sys.stdout, sys.stderr,
-                    apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress(),
-                    consoleui.Applying, consoleui.terminate)
+
+    modes = Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode, simulate_mode, prompt_mode,
+                  fatal_errors_mode)
+    #TODO: Use "apt.progress.FetchProgress()" when it has been implemented
+    progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
+    runner = Runner(user_id, modes, sys.stdout, sys.stderr,
+                    progresses, consoleui.Applying, consoleui.terminate)
         
     try:
         if args.subcommand == 'update':
             runner.update()
         elif args.subcommand == 'safe-upgrade':
-            runner.safe_upgrade()
+            runner.upgrade(full_upgrade=False)
         elif args.subcommand == 'full-upgrade':
-            runner.full_upgrade()
+            runner.upgrade(full_upgrade=True)
         elif args.subcommand == 'print-enclosure':
             runner.print_enclosure(args.versions)
         elif args.subcommand == 'list-of-mine':
