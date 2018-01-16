@@ -22,29 +22,44 @@
 
 
 import sys
+import apt
 from limitedapt.enclosure import *
 
 
-def add_everypackage(enclosure, name):
-    archAndVersions = ArchAndVersions(is_every=True)
-    archAndVersions.every = Versions(is_every=True)
-    enclosure.add_package(name, archAndVersions)
+def _add_everypackage(enclosure, name):
+    cache = apt.Cache()
+    pkg = cache[name]
+    print("PACKAGE ARCHITECTURE: {0}".format(pkg.architecture()))
+    if pkg.architecture() == "all":
+        arch_and_versions = ArchAndVersions()
+        arch_and_versions.add(Versions(isevery=True), "all")
+    else:    
+        arch_and_versions = ArchAndVersions(isevery=True)
+        arch_and_versions.every = Versions(isevery=True)
+    enclosure.add_package(name, arch_and_versions)
 
 
 def main():
-    filename = argv[1]
-    print('''loading non-system package set (enclosure) from file "{0}" ...'''.format(filename))
+    filename = sys.argv[1]
     try:
         enclosure = Enclosure()
+        print('''loading non-system package set (enclosure) from file "{0}" ...'''.format(filename))
         enclosure.import_from_xml(filename)
-        add_everypackage(enclosure, argv[2])
+        _add_everypackage(enclosure, sys.argv[2])
+        print('''saving non-system package set (enclosure) to file "{0}" ...'''.format(filename))
         enclosure.export_to_xml(filename)
-    except EnclosureImportSyntaxError as err:
-        print(err, file=sys.stderr)
-        sys.exit(1)
     except IOError as err:
         print(err, file=sys.stderr)
+        sys.exit(1)
+    except EnclosureImportSyntaxError as err:
+        print(err, file=sys.stderr)
         sys.exit(2)
+    except CannotAddExistingPackage as err:
+        print(err, file=sys.stderr)
+        sys.exit(3)
+    except EveryError as err:
+        print(err, file=sys.stderr)
+        sys.exit(4)
 
 
 if __name__ == '__main__':

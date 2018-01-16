@@ -1,4 +1,3 @@
-#
 # Copyright (C) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
@@ -186,6 +185,10 @@ class Runner:
         return self.__has_privileges
     
     @property
+    def may_upgrade_package(self):
+        return self.__may_upgrade_package
+    
+    @property
     def default_release(self):
         return self.__default_release
     
@@ -210,9 +213,12 @@ class Runner:
     def __check_user_privileges(self):
         self.__has_privileges = self.username == "root" or \
             self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
+        self.__may_upgrade_package = \
+            self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME)
         self.__debug_message('''your username is: "{0}", ''' \
-                             '''you has privileges for modification operations: "{1}"'''.
-                             format(self.username, self.has_privileges))
+                             '''you has privileges for modification operations: "{1}", ''' \
+                             '''you may upgrade installed packages even they are system-constitutive: "{2}".'''.
+                             format(self.username, self.has_privileges, self.may_upgrade_package))
         if self.modes.purge_unused and self.username != "root":
             self.__print_error('''Error: only root can purge packages and use "--purge-unused" option''')
             self.termination(exitcodes.YOU_HAVE_NOT_PRIVILEGES)
@@ -306,7 +312,7 @@ class Runner:
         for package in self.get_printed_enclosure():
             print(self.modes.package_str(cache, package), file=self.out_stream)
         
-    def __examine_and_apply_changes(self, cache, enclosure, explicit_removes):
+    def __examine_and_apply_changes(self, cache, enclosure, remove_all_possible, explicit_removes):
         changes = cache.get_changes()
         self.applying_ui.show_changes(changes)
         if not changes:
@@ -319,15 +325,15 @@ class Runner:
                         pkg.mark_delete(purge=True)
         else:
             errors = False
-            for pkg in changes:
+            for pkg in sorted(changes):
                 versioned_package = VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version)
-                if (pkg.marked_install and versioned_package not in enclosure):
+                if pkg.marked_install and versioned_package not in enclosure:
                     self.__print_error('''Error: you have not permissions to install package "{0}" because '''
                                        '''it is system-constitutive.'''.format(self.modes.package_str(cache, pkg)))
                     errors = True
                     if self.modes.fatal_errors:
                         break
-                if (pkg.marked_upgrade and versioned_package not in enclosure):
+                if pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
                     self.__print_error('''Error: you have not permissions to upgrade package "{0}" to version "{1}" '''
                                        '''because this new version is system-constitutive.'''.
                                        format(self.modes.package_str(cache, pkg), pkg.candidate.version))
@@ -345,7 +351,10 @@ class Runner:
                     if self.modes.fatal_errors:
                         break
                 #TDOD: Is this logics right?
-                if pkg.marked_delete and pkg not in explicit_removes:
+                if pkg.marked_delete:
+                    if remove_all_possible:
+                        
+                    not in explicit_removes:
                     self.__print_error('''Error: you have not permissions to remove packages other than '''
                                        '''packages you has install later and want to explicitly remove''')
                     errors = True
@@ -399,7 +408,7 @@ class Runner:
         cache = apt.Cache()        
         enclosure = self.__load_enclosure()
         cache.upgrade(full_upgrade)
-        self.__examine_and_apply_changes(cache, enclosure, {})        
+        self.__examine_and_apply_changes(cache, enclosure, True, {})        
               
     def perform_operations(self, operation_tasks):
         if not self.has_privileges:
@@ -426,7 +435,14 @@ class Runner:
                 versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
                 concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
                 if pkg.is_installed:
-                    can_upgrade = versioned_package in enclosure and pkg.is_upgradable
+                    #can_upgrade = versioned_package in enclosure and pkg.is_upgradable
+                    if pkg.is_upgradable:
+                        if versioned_package in enclosure or self.may_upgrade_package:
+                            pkg.mark_upgrade()
+                        else:
+                            print('''Error: package "{0}" which you want to install is system and'''
+                                  '''nothing but root or users in "limited-apt-upgraders" may upgrade it'''.
+                                   format(pkg.name), file=self.out_stream)                            
                     if pkg.is_auto_installed:
                         if versioned_package in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
@@ -529,6 +545,6 @@ class Runner:
 #                     pkg.mark_delete(auto_fix=False, purge=True)
 #             finally:
 #                 pass
-        self.__examine_and_apply_changes(cache, enclosure, {})        
+        self.__examine_and_apply_changes(cache, enclosure, False, {})        
         
         self.__save_coownership_list(coownership)

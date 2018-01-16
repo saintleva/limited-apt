@@ -18,6 +18,7 @@
 
 UNIX_LIMITEDAPT_GROUPNAME = 'limited-apt'
 UNIX_LIMITEDAPT_ROOTS_GROUPNAME = 'limited-apt-roots'
+UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME = 'limited-apt-upgraders'
 
 DEBUG = True
 

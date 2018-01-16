@@ -50,6 +50,9 @@ class CoownershipList:
     def is_own(self, pkg, user):
         return user in self.__data[pkg] if pkg in self.__data else False
     
+    def is_sole_own(self, pkg, user):
+        return { user } == self.__data[pkg] if pkg in self.__data else False
+    
     def add_ownership(self, pkg, user, also_root=False):
         #TODO: Is it logics good? 
         if pkg in self.__data:
