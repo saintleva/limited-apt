@@ -32,7 +32,6 @@ from limitedapt.enclosure import *
 class YouHaveNotPrivileges(TerminationError): pass
 
 
-
 class OperationPair:
     
     def __init__(self, command, package):

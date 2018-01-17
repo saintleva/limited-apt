@@ -25,3 +25,6 @@ class StubError(Error):
     
 class XmlImportSyntaxError(Error):
     '''Syntax or semantic error while limited-apt structures xml parsing'''
+
+class TerminationError(Error):
+    '''Exit from runner (e. g. sys.exit() for console interface)'''
