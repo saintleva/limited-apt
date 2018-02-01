@@ -31,8 +31,9 @@ import apt.progress.base
 from limitedapt.errors import StubError
 from limitedapt.runners import *
 from limitedapt.constants import *
-from limitedapt import exitcodes
+from exitcodes import *
 import consoleui
+from argparse import Action
 
 
 DEBUG = True
@@ -40,6 +41,9 @@ DEBUG = True
 SOFTWARE_VERSION = '0.1a'
 PROGRAM_NAME = 'limited-apt'
 
+
+def print_error(msg):
+    print(msg, file=sys.stderr)
 
 def privileged_main():
     
@@ -187,9 +191,29 @@ def privileged_main():
                 else:
                     operation_tasks[operation_pair.command] = [operation_pair.package]
             runner.perform_operations(operation_tasks)
+    except GoodError:
+        sys.exit(ExitCodes.GOOD)
+    except YouHaveNotUserPrivileges as err:
+        if isinstance(err, YouHaveNotPrivilegesToUpdate):
+            action_str = "update package list"
+        elif isinstance(err, YouHaveNotPrivilegesToUpgrade):
+            action_str = "upgrade system"
+        elif isinstance(err, YouHaveNotPrivilegesToPerform):
+            action_str = "perform these operations"
+        print_error('''Error: you have not privileges to {0}: you must be root or a member of "{1}" group'''.
+                    format(action_str, err.group_name))
+        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES)
+    except YouMayNotPurge:
+        print_error('''Error: only root can purge packages and use "--purge-unused" option''')              
+        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES)
+    except GroupNotExist as err:
+        print_error('''Error: "{0}" group doesn't exist'''.format(err.group_name))
+        sys.exit(ExitCodes.GROUP_NOT_EXIST)
+    except ConfigFilesIOError as err:
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)        
     except StubError as err:
-        print('It is a stub: ', err, file=sys.stderr)
-        sys.exit(exitcodes.STUB)
+        print_error('It is a stub: ', err)
+        sys.exit(ExitCodes.STUB)
 
 
 if __name__ == '__main__':
