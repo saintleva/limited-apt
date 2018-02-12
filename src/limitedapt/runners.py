@@ -23,61 +23,12 @@ import apt
 import apt_pkg
 import apt.progress.base
 from limitedapt import exitcodes, constants, coownership
-from limitedapt.errors import StubError
+from limitedapt.errors import *
 from limitedapt.packages import *
 from limitedapt.coownership import *
 from limitedapt.enclosure import *
 
 
-class GoodError(TerminationError): pass
-
-class GroupError(TerminationError):
-    
-    def __init__(self, group_name):
-        self.__group_name = group_name
-        
-    @property
-    def group_name(self):
-        return self.__group_name
-    
-class YouHaveNotPrivileges: pass
-
-class YouHaveNotUserPrivileges(YouHaveNotPrivileges, GroupError): pass
-
-class YouHaveNotPrivilegesToUpdate(YouHaveNotUserPrivileges): pass
-
-class YouHaveNotPrivilegesToUpgrade(YouHaveNotUserPrivileges): pass
-
-class YouHaveNotPrivilegesToPerform(YouHaveNotUserPrivileges): pass
-
-class YouMayNotPurge(YouHaveNotPrivileges): pass
-
-class GroupNotExist(GroupError): pass
-    
-class ConfigFilesIOError(TerminationError):
-    
-    def __init__(self, error_number):
-        self.__error_number = error_number
-        
-    @property
-    def error_number(self):
-        return self.__error_number
-    
-class ReadingConfigFilesError(ConfigFilesIOError): pass
-
-class WritingConfigFilesError(ConfigFilesIOError): pass
-
-class ParsingConfigFilesError(TerminationError): pass
-
-class AttempToPerformSystemComposing(TerminationError): pass
-
-class AptProcessingError(TerminationError): pass
-
-class LockFailedError(AptProcessingError): pass
-
-class FetchCancelledError(AptProcessingError): pass 
-
-class FetchFailedError(AptProcessingError): pass 
 
 
 class OperationPair:
@@ -258,9 +209,8 @@ class Runner:
             group = grp.getgrnam(group_name)
             return user_name in group.gr_mem
         except KeyError:
-            self.__print_error('''"{0}" group doesn't exist'''.format(group_name))
-            self.termination(exitcodes.GROUP_NOT_EXIST)
-            
+            raise GroupNotExistError(group_name)
+                    
     def __check_user_privileges(self):
         self.__has_privileges = self.username == "root" or \
             self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
@@ -271,8 +221,7 @@ class Runner:
                              '''you may upgrade installed packages even they are system-constitutive: "{2}".'''.
                              format(self.username, self.has_privileges, self.may_upgrade_package))
         if self.modes.purge_unused and self.username != "root":
-            self.__print_error('''Error: only root can purge packages and use "--purge-unused" option''')
-            self.termination(exitcodes.YOU_HAVE_NOT_PRIVILEGES)
+            raise YouMayNotPurgeError
             
     #TODO: Do I really need it?
     def __load_program_options(self):
@@ -301,25 +250,17 @@ class Runner:
             coownership_list = CoownershipList()
             coownership_list.import_from_xml(filename)
             return coownership_list
-        except CoownershipImportSyntaxError as err:
-            self.__print_error(err)
-            self.termination(exitcodes.ERROR_WHILE_PARSING_CONFIG_FILES)
-        except IOError as err:
-            self.__print_error(err)
-            self.termination(err.errno) #TODO: is it right?
-            
+        except (CoownershipImportSyntaxError, IOError):
+            raise ReadingConfigFilesError
+                    
     def __save_coownership_list(self, coownership_list):
         filename = os.path.join(constants.path_to_program_config(), 'coownership-list')
         self.__debug_message('''save list of package coownership (by users) to file "{0}" ...'''.
                              format(filename))
         try:
             coownership_list.export_to_xml(filename)
-#         except CoownershipImportSyntaxError as err:
-#             self.__print_error(err)
-#             self.termination(exitcodes.ERROR_WHILE_PARSING_CONFIG_FILES)
-        except IOError as err:
-            self.__print_error(err)
-            self.termination(err.errno) #TODO: is it right?
+        except IOError:
+            raise WritingConfigFilesError
 
     def __load_enclosure(self):
         filename = os.path.join(constants.path_to_program_config(), 'enclosure')
@@ -329,12 +270,8 @@ class Runner:
             enclosure = Enclosure()
             enclosure.import_from_xml(filename)
             return enclosure 
-        except EnclosureImportSyntaxError as err:
-            self.__print_error(err)
-            self.termination(exitcodes.ERROR_WHILE_PARSING_CONFIG_FILES)
-        except IOError as err:
-            self.__print_error(err)
-            self.termination(err.errno) #TODO: is it right?
+        except (EnclosureImportSyntaxError, IOError):
+            raise ReadingConfigFilesError
             
     def get_list_of_mine(self):
         coownership_list = self.__load_coownership_list()               
@@ -367,7 +304,7 @@ class Runner:
         changes = cache.get_changes()
         self.applying_ui.show_changes(changes)
         if not changes:
-            self.termination(exitcodes.GOOD)
+            raise GoodExit
         
         if self.username == "root":
             if self.modes.purge_unused:
@@ -433,21 +370,18 @@ class Runner:
 #                         if self._fatal_errors_mode:
 #                             break
             if errors:
-                self.termination(exitcodes.ATTEMPT_TO_PERFORM_SYSTEM_COMPOSING)
-         
+                raise AttempToPerformSystemComposingError
+                     
 #        agree = self.applying_ui.prompt_agree() if self.modes.prompt else True
         if self.applying_ui.prompt_agree():
             try:
                 cache.commit(self.progresses.acquire, self.progresses.install)
             except apt.cache.LockFailedException as err:
-                #TODO: process this exception 
-                print('CANNOT LOCK: ', err, file=self.err_stream)
+                raise LockFailedError(err)
             except apt.cache.FetchCancelledException:
-                #TODO: process this exception 
-                pass
+                raise FetchCancelledError
             except apt.cache.FetchFailedException:
-                #TODO: process this exception 
-                pass
+                raise FetchFailedError
             
     def upgrade(self, full_upgrade=True):
         if not self.has_privileges:

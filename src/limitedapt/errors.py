@@ -28,3 +28,53 @@ class XmlImportSyntaxError(Error):
 
 class TerminationError(Error):
     '''Exit from runner (e. g. sys.exit() for console interface)'''
+
+class GoodExit(TerminationError): pass
+
+class GroupError(TerminationError):
+    
+    def __init__(self, group_name):
+        self.__group_name = group_name
+        
+    @property
+    def group_name(self):
+        return self.__group_name
+    
+class YouHaveNotPrivilegesError: pass
+
+class YouHaveNotUserPrivilegesError(YouHaveNotPrivilegesError, GroupError): pass
+
+class YouMayNotUpdateError(YouHaveNotUserPrivilegesError): pass
+
+class YouMayNotUpgradeError(YouHaveNotUserPrivilegesError): pass
+
+class YouMayNotPerformError(YouHaveNotUserPrivilegesError): pass
+
+class YouMayNotPurgeError(YouHaveNotPrivilegesError): pass
+
+class GroupNotExistError(GroupError): pass
+    
+class ConfigFilesIOError(TerminationError):
+    
+    def __init__(self, error_number):
+        self.__error_number = error_number
+        
+    @property
+    def error_number(self):
+        return self.__error_number
+    
+class ReadingConfigFilesError(ConfigFilesIOError): pass
+
+class WritingConfigFilesError(ConfigFilesIOError): pass
+
+class ParsingConfigFilesError(TerminationError): pass
+
+class AttempToPerformSystemComposingError(TerminationError): pass
+
+class AptProcessingError(TerminationError): pass
+
+class LockFailedError(AptProcessingError): pass
+    
+class FetchCancelledError(AptProcessingError): pass
+
+class FetchFailedError(AptProcessingError): pass 

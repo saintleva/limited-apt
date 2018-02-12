@@ -191,26 +191,31 @@ def privileged_main():
                 else:
                     operation_tasks[operation_pair.command] = [operation_pair.package]
             runner.perform_operations(operation_tasks)
-    except GoodError:
+    except GoodExit:
         sys.exit(ExitCodes.GOOD)
-    except YouHaveNotUserPrivileges as err:
-        if isinstance(err, YouHaveNotPrivilegesToUpdate):
+    except YouHaveNotUserPrivilegesError as err:
+        if isinstance(err, YouHaveNotPrivilegesToUpdateError):
             action_str = "update package list"
-        elif isinstance(err, YouHaveNotPrivilegesToUpgrade):
+        elif isinstance(err, YouHaveNotPrivilegesToUpgradeError):
             action_str = "upgrade system"
-        elif isinstance(err, YouHaveNotPrivilegesToPerform):
+        elif isinstance(err, YouHaveNotPrivilegesToPerformError):
             action_str = "perform these operations"
         print_error('''Error: you have not privileges to {0}: you must be root or a member of "{1}" group'''.
                     format(action_str, err.group_name))
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES)
-    except YouMayNotPurge:
+    except YouMayNotPurgeError:
         print_error('''Error: only root can purge packages and use "--purge-unused" option''')              
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES)
-    except GroupNotExist as err:
+    except GroupNotExistError as err:
         print_error('''Error: "{0}" group doesn't exist'''.format(err.group_name))
         sys.exit(ExitCodes.GROUP_NOT_EXIST)
     except ConfigFilesIOError as err:
-        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)        
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)
+        
+    except LockFailedError as err:
+        print_error('CANNOT LOCK: ', err)
+        
+                    
     except StubError as err:
         print_error('It is a stub: ', err)
         sys.exit(ExitCodes.STUB)
