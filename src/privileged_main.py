@@ -42,8 +42,8 @@ SOFTWARE_VERSION = '0.1a'
 PROGRAM_NAME = 'limited-apt'
 
 
-def print_error(msg):
-    print(msg, file=sys.stderr)
+def print_error(*args):
+    print(*args, file=sys.stderr)
 
 def privileged_main():
     
@@ -59,7 +59,7 @@ def privileged_main():
         user_id = int(sys.argv[1]) 
     except:
         print('This privileged script has been run incorrectly', file=sys.stderr)
-        sys.exit(exitcodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
+        sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
         
     # Create parser
     
@@ -91,8 +91,9 @@ def privileged_main():
     print_enclosure_parser = subparsers.add_parser('print-enclosure',
                                                    help='Print enclosure (the list of non-system packages \
                                                    ordinary user can install).')
-    print_enclosure_parser.add_argument('-r', '--versions', action='store_true',
-                                        help='''Show version constraints for 'allowed' packages.''')
+    #TODO: remove it
+#     print_enclosure_parser.add_argument('-r', '--versions', action='store_true',
+#                                         help='''Show version constraints for 'allowed' packages.''')
         
     # create the parser for the "list-of-mine" command
     subparsers.add_parser('list-of-mine',
@@ -176,9 +177,15 @@ def privileged_main():
         elif args.subcommand == 'full-upgrade':
             runner.upgrade(full_upgrade=True)
         elif args.subcommand == 'print-enclosure':
-            runner.print_enclosure(args.versions)
+            if modes.wordy():
+                print('Packages you ({0}) may install:'.format(runner.username))            
+            #TODO: is it right
+            print(runner.get_printed_enclosure())
         elif args.subcommand == 'list-of-mine':
-            runner.list_of_mine()
+            if modes.wordy():
+                print('Packages installed by you ({0}):'.format(runner.username))            
+            #TODO: is it right
+            print(runner.get_list_of_mine())
         elif args.subcommand in operation_subcommands_dict.keys():
             operation_tasks = { args.subcommand : args.packages }
             runner.perform_operations(operation_tasks)
@@ -194,11 +201,11 @@ def privileged_main():
     except GoodExit:
         sys.exit(ExitCodes.GOOD)
     except YouHaveNotUserPrivilegesError as err:
-        if isinstance(err, YouHaveNotPrivilegesToUpdateError):
+        if isinstance(err, YouMayNotUpdateError):
             action_str = "update package list"
-        elif isinstance(err, YouHaveNotPrivilegesToUpgradeError):
+        elif isinstance(err, YouMayNotUpgradeError):
             action_str = "upgrade system"
-        elif isinstance(err, YouHaveNotPrivilegesToPerformError):
+        elif isinstance(err, YouMayNotPerformError):
             action_str = "perform these operations"
         print_error('''Error: you have not privileges to {0}: you must be root or a member of "{1}" group'''.
                     format(action_str, err.group_name))
@@ -209,13 +216,30 @@ def privileged_main():
     except GroupNotExistError as err:
         print_error('''Error: "{0}" group doesn't exist'''.format(err.group_name))
         sys.exit(ExitCodes.GROUP_NOT_EXIST)
-    except ConfigFilesIOError as err:
+    except ReadingConfigFilesError as err:
+        print_error('''Error number "{0}" appeared while reading config file "{1}"'''.
+                    format(err.error_number, err.filename))
+        sys.exit(ExitCodes.ERROR_WHILE_READING_CONFIG_FILES)
+    except WritingConfigFilesError as err:
+        print_error('''Error number "{0}" appeared while reading config file "{1}"'''.
+                    format(err.error_number, err.filename))
+        sys.exit(ExitCodes.ERROR_WHILE_READING_CONFIG_FILES)        
+    except EnclosureImportSyntaxError:
+        print_error('Error while parsing enclosure')
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)
+    except CoownershipImportSyntaxError:
+        print_error('Error while parsing coownership-list')
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)
         
     except LockFailedError as err:
         print_error('CANNOT LOCK: ', err)
-        
-                    
+        sys.exit(ExitCodes.LOCK_FAILED)
+    except FetchCancelledError as err:
+        print_error('Error: fetch cancelled')              
+        sys.exit(ExitCodes.FETCH_CANCELLED)
+    except FetchFailedError as err:
+        print_error('Error: fetch cancelled')              
+        sys.exit(ExitCodes.FETCH_FAILED)                    
     except StubError as err:
         print_error('It is a stub: ', err)
         sys.exit(ExitCodes.STUB)

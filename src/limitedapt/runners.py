@@ -22,7 +22,7 @@ import os.path
 import apt
 import apt_pkg
 import apt.progress.base
-from limitedapt import exitcodes, constants, coownership
+from limitedapt import constants, coownership
 from limitedapt.errors import *
 from limitedapt.packages import *
 from limitedapt.coownership import *
@@ -134,10 +134,9 @@ def list_to_str(items):
 
 class Runner:
     
-    def __init__(self, user_id, modes, out_stream, err_stream, progresses, applying_ui, termination):
+    def __init__(self, user_id, modes, debug_stream, progresses, applying_ui, termination):
         self.__modes = modes
-        self.__out_stream = out_stream
-        self.__err_stream = err_stream
+        self.__debug_stream = debug_stream
         self.__progresses = progresses
         self.__applying_ui = applying_ui(modes)
         self.__termination = termination
@@ -159,17 +158,14 @@ class Runner:
         return self.__modes
     
     @property
-    def out_stream(self):
-        return self.__out_stream
+    def debug_stream(self):
+        return self.__debug_stream
     
     @property
     def progresses(self):
         return self.__progresses
     
     @property
-    def err_stream(self):
-        return self.__err_stream
-    
     @property
     def applying_ui(self):
         return self.__applying_ui
@@ -193,12 +189,6 @@ class Runner:
     @property
     def default_release(self):
         return self.__default_release
-    
-    def __print_message(self, msg):
-        print(msg, file=self.out_stream)
-    
-    def __print_error(self, msg):
-        print(msg, file=self.err_stream)
     
     def __debug_message(self, message):
         if self.modes.debug:
@@ -233,10 +223,7 @@ class Runner:
 
     def update(self):
         if not self.has_privileges:
-            self.__print_error('''Error: you have not privileges to update package list: '''
-                               '''you must be root or a member of "{0}" group'''.
-                               format(constants.UNIX_LIMITEDAPT_GROUPNAME))
-            self.termination(exitcodes.YOU_HAVE_NOT_PRIVILEGES)
+            raise YouMayNotUpdateError
         cache = apt.Cache()
         cache.update(self.progresses.fetch)
         cache.open(None) #TODO: Do I really need to re-open the cache here?    
@@ -250,8 +237,8 @@ class Runner:
             coownership_list = CoownershipList()
             coownership_list.import_from_xml(filename)
             return coownership_list
-        except (CoownershipImportSyntaxError, IOError):
-            raise ReadingConfigFilesError
+        except IOError as err:
+            raise ReadingConfigFilesError(filename, err.errno)
                     
     def __save_coownership_list(self, coownership_list):
         filename = os.path.join(constants.path_to_program_config(), 'coownership-list')
@@ -260,7 +247,7 @@ class Runner:
         try:
             coownership_list.export_to_xml(filename)
         except IOError:
-            raise WritingConfigFilesError
+            raise WritingConfigFilesError()
 
     def __load_enclosure(self):
         filename = os.path.join(constants.path_to_program_config(), 'enclosure')
@@ -269,42 +256,31 @@ class Runner:
         try:
             enclosure = Enclosure()
             enclosure.import_from_xml(filename)
-            return enclosure 
-        except (EnclosureImportSyntaxError, IOError):
-            raise ReadingConfigFilesError
-            
+            return enclosure
+        except IOError as err:
+            raise ReadingConfigFilesError(filename, err.errno)
+        
     def get_list_of_mine(self):
         coownership_list = self.__load_coownership_list()               
-        return sorted(coownership_list.his_packages(self.username)) 
-            
-    def list_of_mine(self):
+        return sorted(coownership_list.his_packages(self.username))
+    
+    def get_printed_list_of_mine(self):
         cache = apt.Cache()
-        if self.modes.wordy():
-            self.__print_message('Packages installed by you ({0}):'.format(self.username))            
-        for package in self.get_list_of_mine():
-            print(self.modes.package_str(cache, package), file=self.out_stream)
-        
+        return (self.modes.package_str(cache, package) for package in self.get_list_of_mine())        
+            
     def get_printed_enclosure(self):
         cache = apt.Cache()
-        enclosure = self.__load_enclosure()
-        
+        enclosure = self.__load_enclosure()        
         # We don't need to sort packages because iterator of "Cache" class already returns
         # sorted sequence
         return (self.modes.package_str(cache, pkg) for pkg in cache if pkg.candidate is not None and
                 VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version) in enclosure)
                     
-    def print_enclosure(self, show_version_constraints):
-        cache = apt.Cache()
-        if self.modes.wordy():
-            self.__print_message('Ordinary user can install these packages:')                     
-        for package in self.get_printed_enclosure():
-            print(self.modes.package_str(cache, package), file=self.out_stream)
-        
     def __examine_and_apply_changes(self, cache, enclosure, remove_all_possible, explicit_removes):
         changes = cache.get_changes()
         self.applying_ui.show_changes(changes)
         if not changes:
-            raise GoodExit
+            raise GoodExit()
         
         if self.username == "root":
             if self.modes.purge_unused:
@@ -379,9 +355,9 @@ class Runner:
             except apt.cache.LockFailedException as err:
                 raise LockFailedError(err)
             except apt.cache.FetchCancelledException:
-                raise FetchCancelledError
+                raise FetchCancelledError(err)
             except apt.cache.FetchFailedException:
-                raise FetchFailedError
+                raise FetchFailedError(err)
             
     def upgrade(self, full_upgrade=True):
         if not self.has_privileges:

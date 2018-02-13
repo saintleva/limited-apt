@@ -53,12 +53,17 @@ class YouMayNotPerformError(YouHaveNotUserPrivilegesError): pass
 class YouMayNotPurgeError(YouHaveNotPrivilegesError): pass
 
 class GroupNotExistError(GroupError): pass
-    
+
 class ConfigFilesIOError(TerminationError):
     
-    def __init__(self, error_number):
+    def __init__(self, filename, error_number):
+        self.__filename = filename
         self.__error_number = error_number
         
+    @property
+    def filename(self):
+        return self.__filename
+                
     @property
     def error_number(self):
         return self.__error_number
@@ -66,8 +71,6 @@ class ConfigFilesIOError(TerminationError):
 class ReadingConfigFilesError(ConfigFilesIOError): pass
 
 class WritingConfigFilesError(ConfigFilesIOError): pass
-
-class ParsingConfigFilesError(TerminationError): pass
 
 class AttempToPerformSystemComposingError(TerminationError): pass
 

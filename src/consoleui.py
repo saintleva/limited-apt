@@ -115,11 +115,11 @@ class ErrorHandlers:
         
     def not_installed_warning(self, pkg_name):
         print('''Warning: package "{0}" which you want to mark as manually installed is not installed'''.
-              format(pkg.name))       
+              format(pkg_name))       
 
     def autoinstalled_is_not_installed_warning(self, pkg_name):
         print('''Warning: package "{0}" which you want to mark as automatically installed is not installed'''.
-              format(pkg.name))
+              format(pkg_name))
         
     def may_not_remove(self, pkg_name):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.
@@ -140,5 +140,5 @@ class VerboseHandlers:
     
     def physical_removation(self, pkg_name):
         print('''No simple user has installed package "{0}" therefore physical removation '''
-              '''is equivalent to simple removation in that case'''.format(pkd_name))
+              '''is equivalent to simple removation in that case'''.format(pkg_name))
         
