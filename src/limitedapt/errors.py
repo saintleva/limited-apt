@@ -46,7 +46,14 @@ class YouHaveNotUserPrivilegesError(YouHaveNotPrivilegesError, GroupError): pass
 
 class YouMayNotUpdateError(YouHaveNotUserPrivilegesError): pass
 
-class YouMayNotUpgradeError(YouHaveNotUserPrivilegesError): pass
+class YouMayNotUpgradeError(YouHaveNotUserPrivilegesError):
+    
+    def __init__(self, full_upgrade):
+        self.__full_upgrade = full_upgrade
+        
+    @property
+    def full_upgrade(self):
+        return self.__full_upgrade
 
 class YouMayNotPerformError(YouHaveNotUserPrivilegesError): pass
 

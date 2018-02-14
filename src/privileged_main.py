@@ -25,13 +25,12 @@ import os
 
 import sys
 import argparse
-import apt.progress
 import apt.progress.text
 import apt.progress.base
 from limitedapt.errors import StubError
 from limitedapt.runners import *
 from limitedapt.constants import *
-from exitcodes import *
+from exitcodes import ExitCodes
 import consoleui
 from argparse import Action
 
@@ -165,9 +164,9 @@ def privileged_main():
     modes = Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode, simulate_mode, prompt_mode,
                   fatal_errors_mode)
     #TODO: Use "apt.progress.FetchProgress()" when it has been implemented
+    #TODO: test it
     progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
-    runner = Runner(user_id, modes, sys.stdout, sys.stderr,
-                    progresses, consoleui.Applying, consoleui.terminate)
+    runner = Runner(user_id, modes, consoleui.ErrorHandlers, consoleui.Applying, progresses, sys.stderr) 
         
     try:
         if args.subcommand == 'update':
@@ -204,7 +203,7 @@ def privileged_main():
         if isinstance(err, YouMayNotUpdateError):
             action_str = "update package list"
         elif isinstance(err, YouMayNotUpgradeError):
-            action_str = "upgrade system"
+            action_str = "fully upgrade system" if err.full_upgrade else "safely upgrade system"
         elif isinstance(err, YouMayNotPerformError):
             action_str = "perform these operations"
         print_error('''Error: you have not privileges to {0}: you must be root or a member of "{1}" group'''.
@@ -230,7 +229,6 @@ def privileged_main():
     except CoownershipImportSyntaxError:
         print_error('Error while parsing coownership-list')
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)
-        
     except LockFailedError as err:
         print_error('CANNOT LOCK: ', err)
         sys.exit(ExitCodes.LOCK_FAILED)

@@ -134,12 +134,12 @@ def list_to_str(items):
 
 class Runner:
     
-    def __init__(self, user_id, modes, debug_stream, progresses, applying_ui, termination):
+    def __init__(self, user_id, modes, handlers, applying_ui, progresses, debug_stream):
         self.__modes = modes
-        self.__debug_stream = debug_stream
-        self.__progresses = progresses
+        self.__handlers = handlers(modes)
         self.__applying_ui = applying_ui(modes)
-        self.__termination = termination
+        self.__progresses = progresses
+        self.__debug_stream = debug_stream
         
         def effective_username(user_id):
             if user_id == 0:
@@ -158,22 +158,20 @@ class Runner:
         return self.__modes
     
     @property
-    def debug_stream(self):
-        return self.__debug_stream
+    def handlers(self):
+        return self.__handlers
     
-    @property
-    def progresses(self):
-        return self.__progresses
-    
-    @property
     @property
     def applying_ui(self):
         return self.__applying_ui
     
     @property
-    def termination(self):
-        return self.__termination
+    def progresses(self):
+        return self.__progresses
     
+    def debug_stream(self):
+        return self.__debug_stream
+       
     @property
     def username(self):
         return self.__username
@@ -211,7 +209,7 @@ class Runner:
                              '''you may upgrade installed packages even they are system-constitutive: "{2}".'''.
                              format(self.username, self.has_privileges, self.may_upgrade_package))
         if self.modes.purge_unused and self.username != "root":
-            raise YouMayNotPurgeError
+            raise YouMayNotPurgeError()
             
     #TODO: Do I really need it?
     def __load_program_options(self):
@@ -223,7 +221,7 @@ class Runner:
 
     def update(self):
         if not self.has_privileges:
-            raise YouMayNotUpdateError
+            raise YouMayNotUpdateError()
         cache = apt.Cache()
         cache.update(self.progresses.fetch)
         cache.open(None) #TODO: Do I really need to re-open the cache here?    
@@ -242,7 +240,7 @@ class Runner:
                     
     def __save_coownership_list(self, coownership_list):
         filename = os.path.join(constants.path_to_program_config(), 'coownership-list')
-        self.__debug_message('''save list of package coownership (by users) to file "{0}" ...'''.
+        self.__debug_message('''saving list of package coownership (by users) to file "{0}" ...'''.
                              format(filename))
         try:
             coownership_list.export_to_xml(filename)
@@ -346,7 +344,7 @@ class Runner:
 #                         if self._fatal_errors_mode:
 #                             break
             if errors:
-                raise AttempToPerformSystemComposingError
+                raise AttempToPerformSystemComposingError()
                      
 #        agree = self.applying_ui.prompt_agree() if self.modes.prompt else True
         if self.applying_ui.prompt_agree():
@@ -361,34 +359,24 @@ class Runner:
             
     def upgrade(self, full_upgrade=True):
         if not self.has_privileges:
-            upgrade_type = "fully upgrade" if full_upgrade else "safe upgrade"
-            self.__print_error('''Error: you have not privileges to {0} : '''
-                               '''you must be root or a member of "{1}" group'''.
-                               format(upgrade_type, constants.UNIX_LIMITEDAPT_GROUPNAME))
-            self.termination(exitcodes.YOU_HAVE_NOT_PRIVILEGES)            
-        cache = apt.Cache()        
+            raise YouMayNotUpgradeError(full_upgrade)
+        cache = apt.Cache()
         enclosure = self.__load_enclosure()
         cache.upgrade(full_upgrade)
         self.__examine_and_apply_changes(cache, enclosure, True, {})        
               
     def perform_operations(self, operation_tasks):
         if not self.has_privileges:
-            self.__print_error('''Error: you have not privileges to perform these operations: '''
-                               '''you must be root or a member of "{0}" group'''.
-                               format(constants.UNIX_LIMITEDAPT_GROUPNAME))
-            self.termination(exitcodes.YOU_HAVE_NOT_PRIVILEGES)
-            
+            raise YouMayNotPerformError()
+
         cache = apt.Cache()
         
         coownership = self.__load_coownership_list()
         enclosure = self.__load_enclosure()
         
-        def show_cannot_find_package(pkg_name):
-            print('''Cannot find package "{0}"'''.format(pkg_name), file=self.out_stream)
-            
         installation_tasks = operation_tasks.get("install", [])
         #TODO: Implement good formatting of this message
-        self.__debug_message("you want to install: " + list_to_str(installation_tasks))
+        self.__debug_message("You want to install: " + list_to_str(installation_tasks))
         for package_name in installation_tasks:
             try:
                 pkg = cache[package_name]
@@ -401,9 +389,7 @@ class Runner:
                         if versioned_package in enclosure or self.may_upgrade_package:
                             pkg.mark_upgrade()
                         else:
-                            print('''Error: package "{0}" which you want to install is system and'''
-                                  '''nothing but root or users in "limited-apt-upgraders" may upgrade it'''.
-                                   format(pkg.name), file=self.out_stream)                            
+                            self.handlers.have_not_upgrade_privileges(pkg.name)
                     if pkg.is_auto_installed:
                         if versioned_package in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
@@ -412,24 +398,20 @@ class Runner:
                             coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
-                            print('''Error: package "{0}" which you want to install is system and'''
-                                  '''nothing but root may install it'''.
-                                   format(pkg.name), file=self.out_stream)                            
+                            self.handlers.may_not_install(pkg.name)
                     else:
                         try:
                             coownership.add_ownership(concrete_package, self.username, also_root=True)                            
                         except UserAlreadyOwnsThisPackage:
-                            print('''You already own package "{0}"'''.format(concrete_package))
+                            self.handlers.you_already_own_package(concrete_package)
                 else:
                     if versioned_package in enclosure or self.username == "root":
                         coownership.add_ownership(concrete_package, self.username, also_root=True)
                         pkg.mark_install()
                     else:
-                        print('''Error: package "{0}" which you want to install is system-constitutive '''
-                              '''and nobody but root may install it'''.
-                               format(pkg.name), file=self.out_stream)
+                        self.handlers.may_not_install(pkg.name)
             except KeyError:
-                show_cannot_find_package(package_name)
+                self.handlers.cannot_find_package(pkg.name)
                 
         unmarkauto_tasks = operation_tasks.get("unmarkauto", [])
         #TODO: Implement good formatting of this message
@@ -446,12 +428,9 @@ class Runner:
                             coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
-                            print('''Error: package "{0}" which you want to install is system and'''
-                                  '''nothing but root may install it'''.
-                                   format(pkg.name), file=self.out_stream)                            
+                            self.handlers.may_not_install(pkg.name)
                 else:
-                    print('''Warning: package "{0}" which you want to mark as manually installed is not installed'''.
-                          format(pkg.name), file=self.out_stream)       
+                    self.handlers.not_installed(pkg.name)
             finally:
                 pass                                     
         
@@ -466,8 +445,8 @@ class Runner:
                 else:
                     print('''Warning: package "{0}" which you want to mark as automatically installed is not installed'''.
                           format(pkg.name), file=self.out_stream)
-            finally:
-                pass                                      
+            except KeyError:
+                self.handlers.cannot_find_package(pkg.name)
                 
         physically_remove_tasks = operation_tasks.get("markauto", [])
         self.__debug_message("you want to physically remove: " + list_to_str(physically_remove_tasks))

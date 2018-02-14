@@ -32,9 +32,13 @@ class Applying:
     
     def __init__(self, modes):
         self.__modes = modes
+        
+    @property
+    def modes(self):
+        return self.__modes
     
     def show_changes(self, changes):
-        if self.__modes.wordy():
+        if self.modes.wordy():
             print('You want to perform these factical changes:')
             
         def print_onetype_operation_package_list(pkg_predicate, header):
@@ -91,39 +95,47 @@ class Applying:
 
 class ErrorHandlers:
     
-    def show_cannot_find_package(self, pkg_name):
-        print('''Cannot find package "{0}"'''.format(pkg_name))
+    def __init__(self, modes):
+        self.__modes = modes
+        
+    @property
+    def modes(self):
+        return self.__modes
+    
+    def cannot_find_package(self, pkg_name):
+        print('''Cannot find package "{0}"'''.format(self.modes.package_str(pkg_name)))
         
     def you_already_own_package(self, concrete_package):
         print('''You already own package "{0}"'''.format(concrete_package))
         
-    def package_is_system_constitutive(self, pkg_name, is_auto_installed_yet=False):
+    def may_not_install(self, pkg_name, is_auto_installed_yet=False):
+        name = self.modes.package_str(pkg_name)
         if is_auto_installed_yet:
             print('''Error: package "{0}" which you want to install is system-constitutive and nobody '''
-                  '''but root may install or it '''.format(pkg_name))
+                  '''but root may install or it '''.format(name))
         else:
             print('''Error: package "{0}" which you want to install is system-constitutive and nobody but '''
-                  '''root may install it or throw down "auto-installed" mark from them'''.format(pkg_name))
+                  '''root may install it or throw down "auto-installed" mark from them'''.format(name))
         
     def may_not_upgrade_system_constitutive(self, pkg_name, version):
         print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
               '''this new version is system-constitutive.'''.format(pkg_name, version))
         
-    def have_not_upgrade_privileges(self, pkg_name):
+    def may_not_upgrade(self, pkg_name):
         print('''Error: package "{0}" which you want to install is system and nothing but root '''
-              '''or users in "limited-apt-upgraders" group may upgrade it'''.format(pkg_name))                            
+              '''or users in "limited-apt-upgraders" group may upgrade it'''.format(self.modes.package_str(pkg_name)))                            
         
-    def not_installed_warning(self, pkg_name):
-        print('''Warning: package "{0}" which you want to mark as manually installed is not installed'''.
-              format(pkg_name))       
+    def not_installed(self, pkg_name):
+        print('''Error: package "{0}" which you want to mark as manually installed is not installed'''.
+              format(self.modes.package_str(pkg_name)))       
 
-    def autoinstalled_is_not_installed_warning(self, pkg_name):
-        print('''Warning: package "{0}" which you want to mark as automatically installed is not installed'''.
-              format(pkg_name))
+    def autoinstalled_is_not_installed(self, pkg_name):
+        print('''Error: package "{0}" which you want to mark as automatically installed is not installed'''.
+              format(self.modes.package_str(pkg_name)))
         
     def may_not_remove(self, pkg_name):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.
-              format(pkg_name))
+              format(self.modes.package_str(pkg_name)))
         
     def may_not_downgrade(self):
         print('''Error: you have not permissions to downgrade packages''')
