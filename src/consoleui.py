@@ -16,7 +16,6 @@
 #
 
 
-import sys
 import os
 
 
@@ -27,15 +26,19 @@ def get_terminal_width():
     except:
         columns = 80 # default value
 
-        
-class Applying:
+
+class Modded:
     
-    def __init__(self, modes):
-        self.__modes = modes
-        
     @property
     def modes(self):
         return self.__modes
+    
+    @modes.setter
+    def modes(self, modes):
+        self.__modes = modes
+
+        
+class Applying(Modded):
     
     def show_changes(self, changes):
         if self.modes.wordy():
@@ -93,14 +96,8 @@ class Applying:
             print('Incorrect answer.')
 
 
-class ErrorHandlers:
-    
-    def __init__(self, modes):
-        self.__modes = modes
-        
-    @property
-    def modes(self):
-        return self.__modes
+
+class ErrorHandlers(Modded):
     
     def cannot_find_package(self, pkg_name):
         print('''Cannot find package "{0}"'''.format(self.modes.package_str(pkg_name)))
@@ -123,19 +120,25 @@ class ErrorHandlers:
         
     def may_not_upgrade(self, pkg_name):
         print('''Error: package "{0}" which you want to install is system and nothing but root '''
-              '''or users in "limited-apt-upgraders" group may upgrade it'''.format(self.modes.package_str(pkg_name)))                            
+              '''or users in "limited-apt-upgraders" group may upgrade it'''.format(self.modes.package_str(pkg_name)))
         
-    def not_installed(self, pkg_name):
-        print('''Error: package "{0}" which you want to mark as manually installed is not installed'''.
-              format(self.modes.package_str(pkg_name)))       
-
-    def autoinstalled_is_not_installed(self, pkg_name):
-        print('''Error: package "{0}" which you want to mark as automatically installed is not installed'''.
-              format(self.modes.package_str(pkg_name)))
+    def is_not_installed(self, pkg_name, why_must_be):
+        action_dict = {"remove" : 'remove',
+                       "physically-remove" : 'physically remove',
+                       "purge" : 'remove with its configuration files',
+                       "physically-purge" : 'physically remove with its configuration files',
+                       "markauto" : 'mark as automatically installed',
+                       "unmarkauto" : 'mark as manually installed'}                        
+        print('''Error: package "{0}" which you want to {1} is not installed'''.
+              format(self.modes.package_str(pkg_name), action_dict[why_must_be]))       
         
-    def may_not_remove(self, pkg_name):
+    def may_not_physically_remove(self, pkg_name):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.
               format(self.modes.package_str(pkg_name)))
+        
+    def may_not_remove(self):
+        print('''Error: you have not permissions to remove packages other than packages you has install '''
+              '''later and want to explicitly remove''')
         
     def may_not_downgrade(self):
         print('''Error: you have not permissions to downgrade packages''')
@@ -143,14 +146,6 @@ class ErrorHandlers:
     def may_not_keep(self):
         print('''Error: you have not permissions to keep packages at their current versions''')
         
-    def may_not_implicitly_remove(self):
-        print('''Error: you have not permissions to remove packages other than packages you has install '''
-              '''later and want to explicitly remove''')
-                
-        
-class VerboseHandlers:
-    
     def physical_removation(self, pkg_name):
         print('''No simple user has installed package "{0}" therefore physical removation '''
-              '''is equivalent to simple removation in that case'''.format(pkg_name))
-        
+              '''is equivalent to simple removation in that case'''.format(self.modes.package_str(pkg_name)))

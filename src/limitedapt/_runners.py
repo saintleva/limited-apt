@@ -494,8 +494,8 @@ class Runner:
                 else:
                     print('''Warning: package "{0}" which you want to mark as manually installed is not installed'''.
                           format(pkg.name), file=self.out_stream)       
-            finally:
-                pass                                     
+            except KeyError:
+                show_cannot_find_package(package_name)
         
         markauto_tasks = operation_tasks.get("markauto", [])
         #TODO: Implement good formatting of this message
@@ -511,7 +511,7 @@ class Runner:
             finally:
                 pass                                      
                 
-        physically_remove_tasks = operation_tasks.get("markauto", [])
+        physically_remove_tasks = operation_tasks.get("remove", [])
         self.__debug_message("you want to physically remove: " + list_to_str(physically_remove_tasks))
         for package_name in physically_remove_tasks:
             try:

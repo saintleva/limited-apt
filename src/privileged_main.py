@@ -113,16 +113,22 @@ def privileged_main():
     
     operation_subcommands_dict = {'install' : 'Install/upgrade (non-system) packages by an ordinary user (you).',
                                   'remove' : 'Remove packages that you has installed later.',
+                                  'physically-remove' : 'Removes package even though somebody but me (root) owns it',
+                                  'purge' : 'Remove packages and all its associated configuration and data files (by root only).',
                                   'markauto' : 'Mark packages as having been automatically installed.',
                                   'unmarkauto' : 'Mark packages as having been manually installed by you.'}
     
     class InvalidOperation(Exception): pass
        
-    def unsuffix_operation(operation):
+    def unprefix_operation(operation):
         if operation.endswith('+'):
             return OperationPair('install', operation[:-1])
         elif operation.endswith('-'):
             return OperationPair('remove', operation[:-1])
+        elif operation.endswith('^'):
+            return OperationPair('physically-remove', operation[:-1])
+        elif operation.endswith('_'):
+            return OperationPair('purge', operation[:-1])
         elif operation.endswith('&M'):
             return OperationPair('markauto', operation[:-2])
         elif operation.endswith('&m'):
@@ -132,7 +138,7 @@ def privileged_main():
         
     diverse_parser = subparsers.add_parser('diverse', parents=[parent_operation_parser])
     diverse_parser.add_argument('package_operations', nargs='*', metavar='operation',
-                                help='''a package with one of the suffixes: "+", "-", "&M", "&m" \
+                                help='''a package with one of the suffixes: "+", "-", "_" , "&M", "&m" \
                                 (similarly to ones in aptitude)''')
     
     # create the parser for the "safe-uprade" command
@@ -148,7 +154,7 @@ def privileged_main():
         operation_subcommand_parser = subparsers.add_parser(operation, parents=[parent_operation_parser],
                                                             help=help)
         operation_subcommand_parser.add_argument('packages', nargs='*', metavar='pkg', help='a package')        
-        if operation == 'remove':
+        if operation in ('remove', 'physically-remove', 'purge'):
             operation_subcommand_parser.add_argument('-P', '--purge-unused', action='store_true',
                                                      help="purge packages that is remove their configuration files")
 
@@ -160,9 +166,10 @@ def privileged_main():
     prompt_mode = args.prompt if hasattr(args, 'prompt') else None
     fatal_errors_mode = args.fatal_errors if hasattr(args, 'fatal_errors') else None
     purge_unused_mode = args.purge_unused if hasattr(args, 'purge_unused') else None
+    physically_remove_mode = args.physically_remove if hasattr(args, 'physically_remove') else None
 
-    modes = Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode, simulate_mode, prompt_mode,
-                  fatal_errors_mode)
+    modes = Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode, physically_remove_mode,
+                  simulate_mode, prompt_mode, fatal_errors_mode)
     #TODO: Use "apt.progress.FetchProgress()" when it has been implemented
     #TODO: test it
     progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
@@ -191,7 +198,7 @@ def privileged_main():
         elif args.subcommand == 'diverse':
             operation_tasks = {}
             for operation in args.package_operations:
-                operation_pair = unsuffix_operation(operation)
+                operation_pair = unprefix_operation(operation)
                 if operation_pair.command in operation_tasks:
                     operation_tasks[operation_pair.command].append(operation_pair.package)
                 else:

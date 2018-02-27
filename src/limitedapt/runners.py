@@ -54,11 +54,13 @@ class OperationPair:
 class Modes:
     '''limited-apt application modes (options) incapsulation'''
     
-    def __init__(self, show_arch, debug, verbose, purge_unused, simulate=False, prompt=False, fatal_errors=False):
+    def __init__(self, show_arch, debug, verbose, purge_unused, physically_remove,
+                 simulate=False, prompt=False, fatal_errors=False):
         self.__show_arch = show_arch
         self.__debug = debug
         self.__verbose = verbose
         self.__purge_unused = purge_unused
+        self.__physically_remove = physically_remove
         self.__simulate = simulate
         self.__prompt = prompt
         self.__fatal_errors = fatal_errors
@@ -88,6 +90,10 @@ class Modes:
     @property
     def purge_unused(self):
         return self.__purge_unused
+    
+    @property
+    def physically_remove(self):
+        return self._physically_remove
             
     @property
     def simulate(self):
@@ -101,7 +107,7 @@ class Modes:
     def fatal_errors(self):
         return self.__fatal_errors
   
-    
+     
 class Progresses:
     
     def __init__(self, fetch, acquire, install):   
@@ -136,8 +142,10 @@ class Runner:
     
     def __init__(self, user_id, modes, handlers, applying_ui, progresses, debug_stream):
         self.__modes = modes
-        self.__handlers = handlers(modes)
-        self.__applying_ui = applying_ui(modes)
+        self.__handlers = handlers
+        self.__handlers.modes = modes
+        self.__applying_ui = applying_ui
+        self.__applying_ui.modes = modes
         self.__progresses = progresses
         self.__debug_stream = debug_stream
         
@@ -428,11 +436,11 @@ class Runner:
                             coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
-                            self.handlers.may_not_install(pkg.name)
+                            self.handlers.may_not_install(pkg.name, True)
                 else:
-                    self.handlers.not_installed(pkg.name)
-            finally:
-                pass                                     
+                    self.handlers.manuallyinstalled_is_not_installed(pkg.name)
+            except KeyError:
+                self.handlers.cannot_find_package(pkg.name)
         
         markauto_tasks = operation_tasks.get("markauto", [])
         #TODO: Implement good formatting of this message
@@ -441,22 +449,27 @@ class Runner:
             try:
                 pkg = cache[package_name]
                 if pkg.is_installed:
-                    pass
+                    try:
+                        coownership.remove_ownership(concrete_package, self.username)
+                    except UserDoesNotOwnPackage:
+                                            
                 else:
-                    print('''Warning: package "{0}" which you want to mark as automatically installed is not installed'''.
-                          format(pkg.name), file=self.out_stream)
+                    self.handlers.autoinstalled_is_not_installed(pkg.name)
             except KeyError:
                 self.handlers.cannot_find_package(pkg.name)
                 
-        physically_remove_tasks = operation_tasks.get("markauto", [])
-        self.__debug_message("you want to physically remove: " + list_to_str(physically_remove_tasks))
-        for package_name in physically_remove_tasks:
+        remove_tasks = operation_tasks.get("remove", [])
+        self.__debug_message("you want to remove: " + list_to_str(remove_tasks))
+        for package_name in remove_tasks:
             try:
                 pkg = cache[package_name]
-                if self.username != "root":
-                    print('''Error: you may not physically remove package "{0}" '''
-                          '''because only root may do that'''.
-                           format(self.modes.package_str(pkg)), file=self.err_stream)
+                versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
+                concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
+                if self.modes.physically_remove:
+                    if self.username == "root":
+                        coownership.remove_package(concrete_package, )
+                    
+                    self.handlers.may_not_remove(pkg.name)
                 else:
                     try:
                         coownership.remove_package(package_name)
@@ -464,27 +477,25 @@ class Runner:
                         if self.modes.verbose:
                             print('''No simple user has installed package "{0}" therefore physical removation '''
                                   '''is equivalent to simple removation in that case''', file=self.out_stream)
-                    pkg.mark_delete(auto_fix=False, purge=False)
-            finally:
-                pass
-                
-#         self.__debug_message("you want to purge: " + purge_tasks)
-#         for package_name in purge_tasks:
-#             try:
-#                 pkg = cache[package_name]
-#                 if username != "root":
-#                     print('''Error: you may not purge package "{0}" because only root may do that'''.
-#                           format(self.modes.package_str(pkg)), file=self.err_stream)
-#                 else:
-#                     try:
-#                         coownership.remove_package()
-#                     except PackageIsNotInstalled:
-#                         if self.modes.verbose:
-#                             print('''No simple user has installed package "{0}" therefore '''
-#                                   '''coownership list will not be changed''', file=self.out_stream)
-#                     pkg.mark_delete(auto_fix=False, purge=True)
-#             finally:
-#                 pass
+                            
+        physically_remove_tasks = operation_tasks.get("physically-remove", [])
+        self.__debug_message("you want to physically remove" + list_to_str(physically_remove_tasks))
+        for package_name in physically_remove_tasks:
+            try:
+                pkg = cache[package_name]
+                concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
+                if self.username != "root":
+                    self.handlers.may_not_physically_remove(pkg.name)
+                else:
+                    try:
+                        coownership.remove_package(concrete_package)
+                    except PackageIsNotInstalled:
+                        if self.modes.verbose:
+                            print('''No simple user has installed package "{0}" therefore physical removation '''
+                                  '''is equivalent to simple removation in that case''', file=self.out_stream)
+            except KeyError:
+                self.handlers.cannot_find_package(pkg.name)
+
         self.__examine_and_apply_changes(cache, enclosure, False, {})        
         
         self.__save_coownership_list(coownership)
