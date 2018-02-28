@@ -120,7 +120,7 @@ def privileged_main():
     
     class InvalidOperation(Exception): pass
        
-    def unprefix_operation(operation):
+    def unsuffix_operation(operation):
         if operation.endswith('+'):
             return OperationPair('install', operation[:-1])
         elif operation.endswith('-'):
@@ -198,7 +198,7 @@ def privileged_main():
         elif args.subcommand == 'diverse':
             operation_tasks = {}
             for operation in args.package_operations:
-                operation_pair = unprefix_operation(operation)
+                operation_pair = unsuffix_operation(operation)
                 if operation_pair.command in operation_tasks:
                     operation_tasks[operation_pair.command].append(operation_pair.package)
                 else:

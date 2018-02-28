@@ -419,7 +419,7 @@ class Runner:
                     else:
                         self.handlers.may_not_install(pkg.name)
             except KeyError:
-                self.handlers.cannot_find_package(pkg.name)
+                self.handlers.cannot_find_package(package_name)
                 
         unmarkauto_tasks = operation_tasks.get("unmarkauto", [])
         #TODO: Implement good formatting of this message
@@ -440,7 +440,7 @@ class Runner:
                 else:
                     self.handlers.manuallyinstalled_is_not_installed(pkg.name)
             except KeyError:
-                self.handlers.cannot_find_package(pkg.name)
+                self.handlers.cannot_find_package(package_name)
         
         markauto_tasks = operation_tasks.get("markauto", [])
         #TODO: Implement good formatting of this message
@@ -456,45 +456,55 @@ class Runner:
                 else:
                     self.handlers.autoinstalled_is_not_installed(pkg.name)
             except KeyError:
-                self.handlers.cannot_find_package(pkg.name)
+                self.handlers.cannot_find_package(package_name)
                 
         remove_tasks = operation_tasks.get("remove", [])
         self.__debug_message("you want to remove: " + list_to_str(remove_tasks))
         for package_name in remove_tasks:
             try:
                 pkg = cache[package_name]
-                versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
-                concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
-                if self.modes.physically_remove:
-                    if self.username == "root":
-                        coownership.remove_package(concrete_package, )
-                    
+                try:
+                    coownership.remove_ownership(ConcretePackage(pkg.shortname, pkg.architecture()), self.username)
+                except UserDoesNotOwnPackage:
                     self.handlers.may_not_remove(pkg.name)
-                else:
-                    try:
-                        coownership.remove_package(package_name)
-                    except PackageIsNotInstalled:
-                        if self.modes.verbose:
-                            print('''No simple user has installed package "{0}" therefore physical removation '''
-                                  '''is equivalent to simple removation in that case''', file=self.out_stream)
+                except PackageIsNotInstalled:
+                    self.handlers.physical_removation(pkg.name)
+            except KeyError:
+                self.handlers.cannot_find_package(package_name)
                             
         physically_remove_tasks = operation_tasks.get("physically-remove", [])
         self.__debug_message("you want to physically remove" + list_to_str(physically_remove_tasks))
         for package_name in physically_remove_tasks:
             try:
                 pkg = cache[package_name]
-                concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
                 if self.username != "root":
                     self.handlers.may_not_physically_remove(pkg.name)
                 else:
                     try:
-                        coownership.remove_package(concrete_package)
+                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.architecture()))
                     except PackageIsNotInstalled:
-                        if self.modes.verbose:
-                            print('''No simple user has installed package "{0}" therefore physical removation '''
-                                  '''is equivalent to simple removation in that case''', file=self.out_stream)
+                        self.handlers.physical_removation(pkg.name)
+                    finally:
+                        pkg.mark_delete(purge=self.modes.purge_unused)
             except KeyError:
-                self.handlers.cannot_find_package(pkg.name)
+                self.handlers.cannot_find_package(package_name)
+
+        purge_tasks = operation_tasks.get("purge", [])
+        self.__debug_message("you want to physically remove" + list_to_str(purge_tasks))
+        for package_name in purge_tasks:
+            try:
+                pkg = cache[package_name]
+                if self.username != "root":
+                    self.handlers.may_not_purge(pkg.name)
+                else:
+                    try:
+                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.architecture()))
+                    except PackageIsNotInstalled:
+                        self.handlers.physical_removation(pkg.name)
+                    finally:
+                        pkg.mark_delete(purge=True)
+            except KeyError:
+                self.handlers.cannot_find_package(package_name)
 
         self.__examine_and_apply_changes(cache, enclosure, False, {})        
         

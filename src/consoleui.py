@@ -100,7 +100,7 @@ class Applying(Modded):
 class ErrorHandlers(Modded):
     
     def cannot_find_package(self, pkg_name):
-        print('''Cannot find package "{0}"'''.format(self.modes.package_str(pkg_name)))
+        print('''Cannot find package "{0}"'''.format(pkg_name))
         
     def you_already_own_package(self, concrete_package):
         print('''You already own package "{0}"'''.format(concrete_package))
@@ -136,9 +136,13 @@ class ErrorHandlers(Modded):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.
               format(self.modes.package_str(pkg_name)))
         
-    def may_not_remove(self):
-        print('''Error: you have not permissions to remove packages other than packages you has install '''
-              '''later and want to explicitly remove''')
+    def may_not_purge(self, pkg_name):
+        print('''Error: you may not purge package "{0}" because only root may do that'''.
+              format(self.modes.package_str(pkg_name)))
+        
+    def may_not_remove(self, pkg_name):
+        print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
+              '''you have install later and want to explicitly remove'''.format(self.modes.package_str(pkg_name)))
         
     def may_not_downgrade(self):
         print('''Error: you have not permissions to downgrade packages''')
@@ -147,5 +151,6 @@ class ErrorHandlers(Modded):
         print('''Error: you have not permissions to keep packages at their current versions''')
         
     def physical_removation(self, pkg_name):
-        print('''No simple user has installed package "{0}" therefore physical removation '''
-              '''is equivalent to simple removation in that case'''.format(self.modes.package_str(pkg_name)))
+        if self.modes.verbose:
+            print('''No simple user has installed package "{0}" therefore physical removation '''
+                  '''is equivalent to simple removation in that case'''.format(self.modes.package_str(pkg_name)))
