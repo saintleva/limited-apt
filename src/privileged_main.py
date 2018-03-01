@@ -138,7 +138,7 @@ def privileged_main():
         
     diverse_parser = subparsers.add_parser('diverse', parents=[parent_operation_parser])
     diverse_parser.add_argument('package_operations', nargs='*', metavar='operation',
-                                help='''a package with one of the suffixes: "+", "-", "_" , "&M", "&m" \
+                                help='''a package with one of the suffixes: "+", "-", "^", "_", "&M", "&m" \
                                 (similarly to ones in aptitude)''')
     
     # create the parser for the "safe-uprade" command

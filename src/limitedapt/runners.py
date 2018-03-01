@@ -287,7 +287,7 @@ class Runner:
         self.applying_ui.show_changes(changes)
         if not changes:
             raise GoodExit()
-        
+              
         if self.username == "root":
             if self.modes.purge_unused:
                 for pkg in changes:
@@ -295,41 +295,39 @@ class Runner:
                         pkg.mark_delete(purge=True)
         else:
             errors = False
+            
+            def check_fatal():
+                nonlocal errors
+                errors = True
+                if self.modes.fatal_errors:
+                    raise AttempToPerformSystemComposingError()                
+                
             for pkg in sorted(changes):
-                versioned_package = VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version)
+                versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
                 if pkg.marked_install and versioned_package not in enclosure:
-                    self.__print_error('''Error: you have not permissions to install package "{0}" because '''
-                                       '''it is system-constitutive.'''.format(self.modes.package_str(cache, pkg)))
-                    errors = True
-                    if self.modes.fatal_errors:
-                        break
+                    self.handlers.may_not_install(pkg.name)
+                    check_fatal()
                 if pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
-                    self.__print_error('''Error: you have not permissions to upgrade package "{0}" to version "{1}" '''
-                                       '''because this new version is system-constitutive.'''.
-                                       format(self.modes.package_str(cache, pkg), pkg.candidate.version))
-                    errors = True
-                    if self.modes.fatal_errors:
-                        break
+                    self.handlers.may_not_upgrade_to_new(pkg.name, pkg.candidate.version)
+                    check_fatal()
                 if pkg.marked_downgrade:
-                    self.__print_error('''Error: you have not permissions to downgrade packages''')
-                    errors = True
-                    if self.modes.fatal_errors:
-                        break
+                    self.handlers.may_not_downgrade()
+                    check_fatal()
                 if pkg.marked_keep:
-                    self.__print_error('''Error: you have not permissions to keep packages at their current versions''')
-                    errors = True
-                    if self.modes.fatal_errors:
-                        break
-                #TDOD: Is this logics right?
+                    self.handlers.may_not_keep()
+                    check_fatal()
                 if pkg.marked_delete:
-                    if remove_all_possible:
-                        
-                    not in explicit_removes:
-                    self.__print_error('''Error: you have not permissions to remove packages other than '''
-                                       '''packages you has install later and want to explicitly remove''')
-                    errors = True
-                    if self.modes.fatal_errors:
-                        break
+                    self.handlers.may_not_remove(pkg.name)
+                    check_fatal()
+
+#                     if remove_all_possible:
+#                         
+#                     not in explicit_removes:
+#                     self.__print_error('''Error: you have not permissions to remove packages other than '''
+#                                        '''packages you has install later and want to explicitly remove''')
+#                     errors = True
+#                     if self.modes.fatal_errors:
+#                         break
                     
                 #TODO: Also process "unmarkauto" !
                 addend = [pkg.name]
@@ -397,7 +395,7 @@ class Runner:
                         if versioned_package in enclosure or self.may_upgrade_package:
                             pkg.mark_upgrade()
                         else:
-                            self.handlers.have_not_upgrade_privileges(pkg.name)
+                            self.handlers.may_not_upgrade(pkg.name)
                     if pkg.is_auto_installed:
                         if versioned_package in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
@@ -406,7 +404,7 @@ class Runner:
                             coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
-                            self.handlers.may_not_install(pkg.name)
+                            self.handlers.may_not_install(pkg.name, is_auto_installed_yet=True)
                     else:
                         try:
                             coownership.add_ownership(concrete_package, self.username, also_root=True)                            
@@ -421,50 +419,16 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                 
-        unmarkauto_tasks = operation_tasks.get("unmarkauto", [])
-        #TODO: Implement good formatting of this message
-        self.__debug_message("you want to unmarkauto: " + list_to_str(unmarkauto_tasks))
-        for package_name in unmarkauto_tasks:
-            try:
-                pkg = cache[package_name]
-                if pkg.is_installed:
-                    if pkg.is_auto_installed:
-                        if versioned_package in enclosure:
-                            # We don't need to catch UserAlreadyOwnsThisPackage exception because
-                            # if installed package marked 'automatically installed' nobody owns it.
-                            # Also we don't add "root" to this package owners for the same reason.
-                            coownership.add_ownership(concrete_package, self.username)
-                            pkg.mark_auto(auto=False)
-                        else:
-                            self.handlers.may_not_install(pkg.name, True)
-                else:
-                    self.handlers.manuallyinstalled_is_not_installed(pkg.name)
-            except KeyError:
-                self.handlers.cannot_find_package(package_name)
-        
-        markauto_tasks = operation_tasks.get("markauto", [])
-        #TODO: Implement good formatting of this message
-        self.__debug_message("you want to markauto: " + list_to_str(markauto_tasks))
-        for package_name in markauto_tasks:
-            try:
-                pkg = cache[package_name]
-                if pkg.is_installed:
-                    try:
-                        coownership.remove_ownership(concrete_package, self.username)
-                    except UserDoesNotOwnPackage:
-                                            
-                else:
-                    self.handlers.autoinstalled_is_not_installed(pkg.name)
-            except KeyError:
-                self.handlers.cannot_find_package(package_name)
-                
         remove_tasks = operation_tasks.get("remove", [])
         self.__debug_message("you want to remove: " + list_to_str(remove_tasks))
         for package_name in remove_tasks:
             try:
                 pkg = cache[package_name]
                 try:
-                    coownership.remove_ownership(ConcretePackage(pkg.shortname, pkg.architecture()), self.username)
+                    concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
+                    coownership.remove_ownership(concrete_package, self.username):
+                    if not coownership.is_somebody_own(concrete_package)
+                        pkg.mark_delete(purge=self.modes.purge_unused)
                 except UserDoesNotOwnPackage:
                     self.handlers.may_not_remove(pkg.name)
                 except PackageIsNotInstalled:
@@ -481,7 +445,7 @@ class Runner:
                     self.handlers.may_not_physically_remove(pkg.name)
                 else:
                     try:
-                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.architecture()))
+                        coownership.remove_package(concrete_package)
                     except PackageIsNotInstalled:
                         self.handlers.physical_removation(pkg.name)
                     finally:
@@ -506,6 +470,49 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
+        markauto_tasks = operation_tasks.get("markauto", [])
+        #TODO: Implement good formatting of this message
+        self.__debug_message("you want to markauto: " + list_to_str(markauto_tasks))
+        for package_name in markauto_tasks:
+            try:
+                pkg = cache[package_name]
+                if pkg.is_installed:
+                    try:
+                        concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
+                        coownership.remove_ownership(concrete_package, self.username)
+                        if not coownership.is_somebody_own(concrete_package):
+                            pkg.mark_auto()
+                    except UserDoesNotOwnPackage:
+                        self.handlers.may_not_markauto(pkg.name)
+                    except PackageIsNotInstalled:
+                        self.handlers.physical_markauto(pkg.name)
+                else:
+                    self.handlers.is_not_installed(pkg.name, "markauto")
+            except KeyError:
+                self.handlers.cannot_find_package(package_name)
+                
+        unmarkauto_tasks = operation_tasks.get("unmarkauto", [])
+        #TODO: Implement good formatting of this message
+        self.__debug_message("you want to unmarkauto: " + list_to_str(unmarkauto_tasks))
+        for package_name in unmarkauto_tasks:
+            try:
+                pkg = cache[package_name]
+                if pkg.is_installed:
+                    if pkg.is_auto_installed:
+                        if VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version) in enclosure:
+                            # We don't need to catch UserAlreadyOwnsThisPackage exception because
+                            # if installed package marked 'automatically installed' nobody owns it.
+                            # Also we don't add "root" to this package owners for the same reason.
+                            coownership.add_ownership(concrete_package, self.username)
+                            pkg.mark_auto(auto=False)
+                        else:
+                            self.handlers.may_not_install(pkg.name, True)
+                else:
+                    self.handlers.is_not_installed(pkg.name, "unmarkauto")
+            except KeyError:
+                self.handlers.cannot_find_package(package_name)
+        
         self.__examine_and_apply_changes(cache, enclosure, False, {})        
         
-        self.__save_coownership_list(coownership)
+        if not self.modes.simulate:
+            self.__save_coownership_list(coownership)

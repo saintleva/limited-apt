@@ -114,11 +114,16 @@ class ErrorHandlers(Modded):
             print('''Error: package "{0}" which you want to install is system-constitutive and nobody but '''
                   '''root may install it or throw down "auto-installed" mark from them'''.format(name))
         
-    def may_not_upgrade_system_constitutive(self, pkg_name, version):
-        print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
-              '''this new version is system-constitutive.'''.format(pkg_name, version))
+#TODO: remove it:
+#    def may_not_upgrade_system_constitutive(self, pkg_name, version):
+#        print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
+#              '''this new version is system-constitutive.'''.format(pkg_name, version))
         
-    def may_not_upgrade(self, pkg_name):
+    def may_not_upgrade_to_new(self, pkg_name, version):
+        print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
+              '''this new version is system-constitutive'''.format(self.modes.package_str(pkg_name), version))
+        
+    def may_not_upgrade_system(self, pkg_name):
         print('''Error: package "{0}" which you want to install is system and nothing but root '''
               '''or users in "limited-apt-upgraders" group may upgrade it'''.format(self.modes.package_str(pkg_name)))
         
@@ -132,6 +137,10 @@ class ErrorHandlers(Modded):
         print('''Error: package "{0}" which you want to {1} is not installed'''.
               format(self.modes.package_str(pkg_name), action_dict[why_must_be]))       
         
+    def may_not_remove(self, pkg_name):
+        print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
+              '''you have installed later and want to explicitly remove'''.format(self.modes.package_str(pkg_name)))
+        
     def may_not_physically_remove(self, pkg_name):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.
               format(self.modes.package_str(pkg_name)))
@@ -140,9 +149,10 @@ class ErrorHandlers(Modded):
         print('''Error: you may not purge package "{0}" because only root may do that'''.
               format(self.modes.package_str(pkg_name)))
         
-    def may_not_remove(self, pkg_name):
-        print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
-              '''you have install later and want to explicitly remove'''.format(self.modes.package_str(pkg_name)))
+    def may_not_markauto(self, pkg_name):
+        print('''Error: you may not mark package "{0}" as automatically installed because you have not permissions '''
+              '''to "markauto" packages other than packages you have marked manually installed later'''.
+              format(self.modes.package_str(pkg_name)))
         
     def may_not_downgrade(self):
         print('''Error: you have not permissions to downgrade packages''')
@@ -154,3 +164,9 @@ class ErrorHandlers(Modded):
         if self.modes.verbose:
             print('''No simple user has installed package "{0}" therefore physical removation '''
                   '''is equivalent to simple removation in that case'''.format(self.modes.package_str(pkg_name)))
+            
+    def physical_markauto(self, pkg_name):
+        if self.modes.verbose:
+            print('''No simple user has marked package "{0}" automatically installed therefore physical 'markauto' '''
+                  '''is equivalent to simple 'markauto' in that case'''.format(self.modes.package_str(pkg_name)))
+    
