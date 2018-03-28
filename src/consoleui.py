@@ -105,8 +105,8 @@ class ErrorHandlers(Modded):
     def you_already_own_package(self, concrete_package):
         print('''You already own package "{0}"'''.format(concrete_package))
         
-    def may_not_install(self, pkg_name, is_auto_installed_yet=False):
-        name = self.modes.package_str(pkg_name)
+    def may_not_install(self, pkg, is_auto_installed_yet=False):
+        name = self.modes.pkg_str(pkg)
         if is_auto_installed_yet:
             print('''Error: package "{0}" which you want to install is system-constitutive and nobody '''
                   '''but root may install or it '''.format(name))
@@ -119,13 +119,14 @@ class ErrorHandlers(Modded):
 #        print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
 #              '''this new version is system-constitutive.'''.format(pkg_name, version))
         
-    def may_not_upgrade_to_new(self, pkg_name, version):
+    def may_not_upgrade_to_new(self, pkg, version):
         print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
-              '''this new version is system-constitutive'''.format(self.modes.package_str(pkg_name), version))
+              '''this new version is system-constitutive'''.format(self.modes.pkg_str(pkg), version))
         
-    def may_not_upgrade_system(self, pkg_name):
-        print('''Error: package "{0}" which you want to install is system and nothing but root '''
-              '''or users in "limited-apt-upgraders" group may upgrade it'''.format(self.modes.package_str(pkg_name)))
+    #TODO: when use this mehton?
+    def may_not_upgrade_system(self, pkg):
+        print('''Error: package "{0}" which you want to upgrade is system and nothing but root '''
+              '''or users in "limited-apt-upgraders" group may upgrade it'''.format(self.modes.pkg_str(pkg)))
         
     def is_not_installed(self, pkg_name, why_must_be):
         action_dict = {"remove" : 'remove',
@@ -137,9 +138,9 @@ class ErrorHandlers(Modded):
         print('''Error: package "{0}" which you want to {1} is not installed'''.
               format(self.modes.package_str(pkg_name), action_dict[why_must_be]))       
         
-    def may_not_remove(self, pkg_name):
+    def may_not_remove(self, pkg):
         print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
-              '''you have installed later and want to explicitly remove'''.format(self.modes.package_str(pkg_name)))
+              '''you have installed later and want to explicitly remove'''.format(self.modes.pkg_str(pkg)))
         
     def may_not_physically_remove(self, pkg_name):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.
@@ -160,6 +161,12 @@ class ErrorHandlers(Modded):
     def may_not_keep(self):
         print('''Error: you have not permissions to keep packages at their current versions''')
         
+    def may_not_install_from_this_archive(self, archive):
+        print('''Error: you have not permissions to install packages from "{0}" archive (suite)'''.format(archive))
+
+    def package_is_not_trusted(self, pkg):
+        print('''Error: package "{0}" is not trusted".'''.format(self.modes.pkg_str(pkg)))
+        
     def physical_removation(self, pkg_name):
         if self.modes.verbose:
             print('''No simple user has installed package "{0}" therefore physical removation '''
@@ -169,4 +176,6 @@ class ErrorHandlers(Modded):
         if self.modes.verbose:
             print('''No simple user has marked package "{0}" automatically installed therefore physical 'markauto' '''
                   '''is equivalent to simple 'markauto' in that case'''.format(self.modes.package_str(pkg_name)))
+    def simulate(self):
+        print('...SIMULATING...')
     

@@ -69,12 +69,17 @@ class Modes:
     def show_arch(self):
         return self.__show_arch
     
-    def package_str(self, cache, package):
-        try:
-            pkg = cache[str(package)]
-        except KeyError:
-            return str(package)
+    def pkg_str(self, pkg):
         return pkg.fullname if self.show_arch else pkg.name
+    
+    
+    #TODO: remove it
+#     def package_str(self, cache, package):
+#         try:
+#             pkg = cache[str(package)]
+#         except KeyError:
+#             return str(package)
+#         return pkg.fullname if self.show_arch else pkg.name
         
     @property
     def debug(self):
@@ -93,7 +98,7 @@ class Modes:
     
     @property
     def physically_remove(self):
-        return self._physically_remove
+        return self.__physically_remove
             
     @property
     def simulate(self):
@@ -305,10 +310,11 @@ class Runner:
             for pkg in sorted(changes):
                 versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
                 if pkg.marked_install and versioned_package not in enclosure:
-                    self.handlers.may_not_install(pkg.name)
+                    self.handlers.may_not_install(pkg)
                     check_fatal()
+                    
                 if pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
-                    self.handlers.may_not_upgrade_to_new(pkg.name, pkg.candidate.version)
+                    self.handlers.may_not_upgrade_to_new(pkg, pkg.candidate.version)
                     check_fatal()
                 if pkg.marked_downgrade:
                     self.handlers.may_not_downgrade()
@@ -317,7 +323,7 @@ class Runner:
                     self.handlers.may_not_keep()
                     check_fatal()
                 if pkg.marked_delete:
-                    self.handlers.may_not_remove(pkg.name)
+                    self.handlers.may_not_remove(pkg)
                     check_fatal()
 
 #                     if remove_all_possible:
@@ -332,30 +338,28 @@ class Runner:
                 #TODO: Also process "unmarkauto" !
                 addend = [pkg.name]
                     
-#                 is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or 
-#                                       pkg.marked_upgrade or pkg.marked_downgrade)
-#                 if is_setup_operation:
-#                     #TODO: Может быть я должен просматривать весь список origins?
-#                     origin = pkg.candidate.origins[0]                    
-#                     if self.default_release is not None and origin.archive != self.default_release:
-#                         self.__print_error('''Error: you have not permissions to install package from origin '''
-#                                            '''(suite) other that default ("{0}")'''.format(self.default_release))
-#                         errors = True            
-#                         if self.modes.fatal_errors:
-#                             break   
-#                     #TODO: Действительно ли я должен проверять это?                     
-#                     if not origin.trusted:
-#                         self.__print_error('''Error: package "{0}" is not trusted".'''.format(modes.package_str(pkg)))
-#                         errors = True            
-#                         if self._fatal_errors_mode:
-#                             break
+                is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or 
+                                      pkg.marked_upgrade or pkg.marked_downgrade)
+                if is_setup_operation:
+                    #TODO: Может быть я должен просматривать весь список origins?
+                    origin = pkg.candidate.origins[0]                    
+                    if self.default_release is not None and origin.archive != self.default_release:
+                        self.handlers.may_not_install_from_this_archive(origin.archive)
+                        check_fatal()
+                    #TODO: Действительно ли я должен проверять это?                     
+                    if not origin.trusted:
+                        self.handlers.package_is_not_trusted(pkg)
+                        check_fatal()
             if errors:
                 raise AttempToPerformSystemComposingError()
                      
 #        agree = self.applying_ui.prompt_agree() if self.modes.prompt else True
         if self.applying_ui.prompt_agree():
             try:
-                cache.commit(self.progresses.acquire, self.progresses.install)
+                if not self.modes.simulate:
+                    cache.commit(self.progresses.acquire, self.progresses.install)
+                else:
+                    self.handlers.simulate()
             except apt.cache.LockFailedException as err:
                 raise LockFailedError(err)
             except apt.cache.FetchCancelledException:
@@ -404,7 +408,7 @@ class Runner:
                             coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
-                            self.handlers.may_not_install(pkg.name, is_auto_installed_yet=True)
+                            self.handlers.may_not_install(pkg, is_auto_installed_yet=True)
                     else:
                         try:
                             coownership.add_ownership(concrete_package, self.username, also_root=True)                            
@@ -415,7 +419,7 @@ class Runner:
                         coownership.add_ownership(concrete_package, self.username, also_root=True)
                         pkg.mark_install()
                     else:
-                        self.handlers.may_not_install(pkg.name)
+                        self.handlers.may_not_install(pkg)
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                 
@@ -506,7 +510,7 @@ class Runner:
                             coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
-                            self.handlers.may_not_install(pkg.name, True)
+                            self.handlers.may_not_install(pkg, True)
                 else:
                     self.handlers.is_not_installed(pkg.name, "unmarkauto")
             except KeyError:
