@@ -18,6 +18,7 @@
 import enum
 
 
+#TODO: Сделать вывод чисел, а не строк!
 class ExitCodes(enum.Enum):
     GOOD = 0
     YOU_HAVE_NOT_PRIVILEGES = 10

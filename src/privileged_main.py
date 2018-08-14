@@ -46,19 +46,24 @@ def print_error(*args):
 
 def privileged_main():
     
-    #TODO: remove it:
-#     print()
-#     print("privileged_main():")
-#     print('UID = {0}, EUID = {1}'.format(os.getuid(), os.geteuid()))
-#     print(sys.argv)
-#     print()
+    if DEBUG:
+        print("privileged_main():")
+        print('UID = {0}, EUID = {1}'.format(os.getuid(), os.geteuid()))
+        print(sys.argv)
+        
+        import time
+        time_path = os.path.join('/sbin/test', str(time.time()))
+        os.makedirs(time_path)
+        print()
     
-    # extract first program argument as id of real user
-    try:
-        user_id = int(sys.argv[1]) 
-    except:
-        print('This privileged script has been run incorrectly', file=sys.stderr)
-        sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
+    #TODO: How must I to compute "user_id"?
+    user_id = os.getuid()
+#     # extract first program argument as id of real user
+#     try:
+#         user_id = int(sys.argv[1]) 
+#     except:
+#         print('This privileged script has been run incorrectly', file=sys.stderr)
+#         sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
         
     # Create parser
     
@@ -160,7 +165,7 @@ def privileged_main():
 
     # Parse and analyse arguments
     
-    args = parser.parse_args(sys.argv[2:])
+    args = parser.parse_args(sys.argv[1:])
         
     simulate_mode = args.simulate if hasattr(args, 'simulate') else None
     prompt_mode = args.prompt if hasattr(args, 'prompt') else None
@@ -173,7 +178,7 @@ def privileged_main():
     #TODO: Use "apt.progress.FetchProgress()" when it has been implemented
     #TODO: test it
     progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
-    runner = Runner(user_id, modes, consoleui.ErrorHandlers, consoleui.Applying, progresses, sys.stderr) 
+    runner = Runner(user_id, modes, consoleui.ErrorHandlers(), consoleui.Applying(), progresses, sys.stderr) 
         
     try:
         if args.subcommand == 'update':
@@ -185,13 +190,13 @@ def privileged_main():
         elif args.subcommand == 'print-enclosure':
             if modes.wordy():
                 print('Packages you ({0}) may install:'.format(runner.username))            
-            #TODO: is it right
-            print(runner.get_printed_enclosure())
+            for name in runner.get_printed_enclosure():
+                print(name)
         elif args.subcommand == 'list-of-mine':
-            if modes.wordy():
+            if modes.wordy(): 
                 print('Packages installed by you ({0}):'.format(runner.username))            
-            #TODO: is it right
-            print(runner.get_list_of_mine())
+            for name in runner.get_printed_list_of_mine():
+                print(name)
         elif args.subcommand in operation_subcommands_dict.keys():
             operation_tasks = { args.subcommand : args.packages }
             runner.perform_operations(operation_tasks)

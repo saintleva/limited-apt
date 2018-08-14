@@ -5,6 +5,10 @@
 #include <string>
 #include <unistd.h>
 
+
+#define SUID_DEBUG 1
+
+
 using std::string;
 
 
@@ -44,7 +48,9 @@ const string executableFilename = "/usr/local/sbin/limited-apt_privileged";
 
 int main(int argc, char* argv[])
 {
-    std::cout << boost::format("UID = %1%, EUID = %2%\n") % getuid() % geteuid();
+    #ifdef SUID_DEBUG
+    std::cout << boost::format("Executor:\nUID = %1%, EUID = %2%\n\n") % getuid() % geteuid();
+    #endif
 
 //    string cmdLine = getCommandLine(executableFilename, getuid(), argc - 1, argv + 1);
 //    std::cout << cmdLine << "\n";
@@ -62,7 +68,7 @@ int main(int argc, char* argv[])
     execv(executableFilename.c_str(), arguments);
 
     for (int i = 0; i <= argc; ++i)
-        delete arguments[i];
+        delete[] arguments[i];
     delete[] arguments;
 
     std::cout << "FINISHED\n";

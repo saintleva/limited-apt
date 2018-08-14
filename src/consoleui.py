@@ -17,6 +17,8 @@
 
 
 import os
+import time
+from limitedapt.constants import *
 
 
 def get_terminal_width():
@@ -24,7 +26,7 @@ def get_terminal_width():
         columns = os.popen('stty size', 'r').read().split()[1]
         return int(columns)
     except:
-        columns = 80 # default value
+        return 80 # default value
 
 
 class Modded:
@@ -126,7 +128,8 @@ class ErrorHandlers(Modded):
     #TODO: when use this mehton?
     def may_not_upgrade_system(self, pkg):
         print('''Error: package "{0}" which you want to upgrade is system and nothing but root '''
-              '''or users in "limited-apt-upgraders" group may upgrade it'''.format(self.modes.pkg_str(pkg)))
+              '''or users in "{1}" group may upgrade it'''.format(self.modes.pkg_str(pkg),
+                                                                  UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME))
         
     def is_not_installed(self, pkg_name, why_must_be):
         action_dict = {"remove" : 'remove',
@@ -174,8 +177,14 @@ class ErrorHandlers(Modded):
             
     def physical_markauto(self, pkg_name):
         if self.modes.verbose:
-            print('''No simple user has marked package "{0}" automatically installed therefore physical 'markauto' '''
+            print('''No simple user has marked package "{0}" automatically installed therefore physical "markauto" '''
                   '''is equivalent to simple 'markauto' in that case'''.format(self.modes.package_str(pkg_name)))
+            
     def simulate(self):
-        print('...SIMULATING...')
-    
+        head = '...SIMULATING'
+        point_count = get_terminal_width() - len(head) 
+        print(head, end='')
+        for i in range(point_count):
+            time.sleep(0.1)
+            print('.', end='')
+        print()

@@ -36,8 +36,14 @@ def main():
 #     print()
 
     #TODO: move to right executor    
-    exitcode = subprocess.call(['sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
+    #exitcode = subprocess.call(['sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
+#    exitcode = subprocess.call([PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
 #    subprocess.call(['executor'] + sys.argv[1:])
+
+    print('main()')
+    print(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE] + sys.argv[1:])
+    print()
+    exitcode = subprocess.call(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE] + sys.argv[1:])
 
     sys.exit(exitcode)
     

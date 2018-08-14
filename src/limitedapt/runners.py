@@ -277,14 +277,14 @@ class Runner:
     
     def get_printed_list_of_mine(self):
         cache = apt.Cache()
-        return (self.modes.package_str(cache, package) for package in self.get_list_of_mine())        
+        return (self.modes.pkg_str(cache[package]) for package in self.get_list_of_mine())        
             
     def get_printed_enclosure(self):
         cache = apt.Cache()
         enclosure = self.__load_enclosure()        
         # We don't need to sort packages because iterator of "Cache" class already returns
         # sorted sequence
-        return (self.modes.package_str(cache, pkg) for pkg in cache if pkg.candidate is not None and
+        return (self.modes.pkg_str(pkg) for pkg in cache if pkg.candidate is not None and
                 VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version) in enclosure)
                     
     def __examine_and_apply_changes(self, cache, enclosure, remove_all_possible, explicit_removes):
@@ -342,10 +342,13 @@ class Runner:
                                       pkg.marked_upgrade or pkg.marked_downgrade)
                 if is_setup_operation:
                     #TODO: Может быть я должен просматривать весь список origins?
-                    origin = pkg.candidate.origins[0]                    
-                    if self.default_release is not None and origin.archive != self.default_release:
-                        self.handlers.may_not_install_from_this_archive(origin.archive)
-                        check_fatal()
+                    origin = pkg.candidate.origins[0]
+                    
+                    #TODO: Вернуть эту проверку                    
+#                     if self.default_release is not None and origin.archive != self.default_release:
+#                         self.handlers.may_not_install_from_this_archive(origin.archive)
+#                         check_fatal()
+                        
                     #TODO: Действительно ли я должен проверять это?                     
                     if not origin.trusted:
                         self.handlers.package_is_not_trusted(pkg)
@@ -362,9 +365,9 @@ class Runner:
                     self.handlers.simulate()
             except apt.cache.LockFailedException as err:
                 raise LockFailedError(err)
-            except apt.cache.FetchCancelledException:
+            except apt.cache.FetchCancelledException as err:
                 raise FetchCancelledError(err)
-            except apt.cache.FetchFailedException:
+            except apt.cache.FetchFailedException as err:
                 raise FetchFailedError(err)
             
     def upgrade(self, full_upgrade=True):
@@ -430,8 +433,8 @@ class Runner:
                 pkg = cache[package_name]
                 try:
                     concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
-                    coownership.remove_ownership(concrete_package, self.username):
-                    if not coownership.is_somebody_own(concrete_package)
+                    coownership.remove_ownership(concrete_package, self.username)
+                    if not coownership.is_somebody_own(concrete_package):
                         pkg.mark_delete(purge=self.modes.purge_unused)
                 except UserDoesNotOwnPackage:
                     self.handlers.may_not_remove(pkg.name)

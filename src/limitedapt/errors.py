@@ -17,6 +17,7 @@
 '''Base exceptions for limited-apt library'''
 
 
+#TODO: May be I need to use "BaseException"
 class Error(Exception):
     '''Base exception for limited-apt library'''
     
@@ -27,7 +28,7 @@ class XmlImportSyntaxError(Error):
     '''Syntax or semantic error while limited-apt structures xml parsing'''
 
 class TerminationError(Error):
-    '''Exit from runner (e. g. sys.exit() for console interface)'''
+    '''Exit from runner (e. g. sys.exit() for command line interface)'''
 
 class GoodExit(TerminationError): pass
 
@@ -40,7 +41,7 @@ class GroupError(TerminationError):
     def group_name(self):
         return self.__group_name
     
-class YouHaveNotPrivilegesError: pass
+class YouHaveNotPrivilegesError(Error): pass
 
 class YouHaveNotUserPrivilegesError(YouHaveNotPrivilegesError, GroupError): pass
 
