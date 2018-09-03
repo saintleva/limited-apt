@@ -21,6 +21,7 @@ import enum
 #TODO: Сделать вывод чисел, а не строк!
 class ExitCodes(enum.Enum):
     GOOD = 0
+    INVALID_OPERATION_ON_THE_SUFFIX = 2
     YOU_HAVE_NOT_PRIVILEGES = 10
     ATTEMPT_TO_PERFORM_SYSTEM_COMPOSING = 11
     YOU_ARE_NOT_COOWNER_OF_PACKAGE = 12

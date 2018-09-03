@@ -123,8 +123,6 @@ def privileged_main():
                                   'markauto' : 'Mark packages as having been automatically installed.',
                                   'unmarkauto' : 'Mark packages as having been manually installed by you.'}
     
-    class InvalidOperation(Exception): pass
-       
     def unsuffix_operation(operation):
         if operation.endswith('+'):
             return OperationPair('install', operation[:-1])
@@ -139,7 +137,8 @@ def privileged_main():
         elif operation.endswith('&m'):
             return OperationPair('unmarkauto', operation[:-2])
         else:
-            raise InvalidOperation('Error: invalid operation: suffix is incorrect')
+            print_error('''Error: invalid operation on the suffix''')              
+            sys.exit(ExitCodes.INVALID_OPERATION_ON_THE_SUFFIX)
         
     diverse_parser = subparsers.add_parser('diverse', parents=[parent_operation_parser])
     diverse_parser.add_argument('package_operations', nargs='*', metavar='operation',
@@ -165,7 +164,7 @@ def privileged_main():
 
     # Parse and analyse arguments
     
-    args = parser.parse_args(sys.argv[1:])
+    args = parser.parse_args(sys.argv[2:])
         
     simulate_mode = args.simulate if hasattr(args, 'simulate') else None
     prompt_mode = args.prompt if hasattr(args, 'prompt') else None

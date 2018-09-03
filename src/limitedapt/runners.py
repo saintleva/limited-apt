@@ -287,9 +287,9 @@ class Runner:
         return (self.modes.pkg_str(pkg) for pkg in cache if pkg.candidate is not None and
                 VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version) in enclosure)
                     
-    def __examine_and_apply_changes(self, cache, enclosure, remove_all_possible, explicit_removes):
+    def __examine_and_apply_changes(self, cache, enclosure, is_upgrading=False):
         changes = cache.get_changes()
-        self.applying_ui.show_changes(changes)
+        self.applying_ui.show_changes(cache, is_upgrading)
         if not changes:
             raise GoodExit()
               
@@ -376,7 +376,7 @@ class Runner:
         cache = apt.Cache()
         enclosure = self.__load_enclosure()
         cache.upgrade(full_upgrade)
-        self.__examine_and_apply_changes(cache, enclosure, True, {})        
+        self.__examine_and_apply_changes(cache, enclosure, is_upgrading=True)        
               
     def perform_operations(self, operation_tasks):
         if not self.has_privileges:
@@ -519,7 +519,7 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
         
-        self.__examine_and_apply_changes(cache, enclosure, False, {})        
+        self.__examine_and_apply_changes(cache, enclosure)        
         
         if not self.modes.simulate:
             self.__save_coownership_list(coownership)

@@ -18,9 +18,12 @@
 
 import os
 import time
+import functools
 from limitedapt.constants import *
 
 
+#TODO: Is it right?
+#@functools.lru_cache
 def get_terminal_width():
     try:
         columns = os.popen('stty size', 'r').read().split()[1]
@@ -42,18 +45,22 @@ class Modded:
         
 class Applying(Modded):
     
-    def show_changes(self, changes):
+    def show_changes(self, cache, is_upgrading=False):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
             
         def print_onetype_operation_package_list(pkg_predicate, header):
             
-            def suffixed_package_name(pkg):
-                return pkg.name + '{a}' if pkg.is_auto_installed else pkg.name   
+            if is_upgrading:
+                def suffixed_package_name(pkg):
+                    return pkg.name
+            else:
+                def suffixed_package_name(pkg):
+                    return pkg.name + '{a}' if pkg.is_auto_installed else pkg.name   
             
             terminal_width = get_terminal_width()
                 
-            package_list = sorted((pkg for pkg in changes if pkg_predicate(pkg)), key=lambda pkg: pkg.name)
+            package_list = sorted((pkg for pkg in cache.get_changes() if pkg_predicate(pkg)), key=lambda pkg: pkg.name)
             if len(package_list) > 0:
                 print(header)
                 line = '  '
@@ -86,6 +93,13 @@ class Applying(Modded):
                                              'These packages will be removed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
                                              'These packages will be kept at they current version:')
+        
+        print('''{0} packages will be updated, {1} new will be installed, {2} marked for deletion, '''
+              '''{3} have not been updated.'''.format(1000, cache.install_count, cache.delete_count,
+                                                      1000))
+        #TODO: Implement KB, MB, Gb, ...
+        print('''Required to download {0} archives. {1} will be occupied after unpacking.'''.
+              format(cache.required_download, cache.required_space))
     
     def prompt_agree(self):
         while True:
@@ -183,8 +197,8 @@ class ErrorHandlers(Modded):
     def simulate(self):
         head = '...SIMULATING'
         point_count = get_terminal_width() - len(head) 
-        print(head, end='')
+        print(head, end='', flush=True)
         for i in range(point_count):
-            time.sleep(0.1)
-            print('.', end='')
+            time.sleep(0.03)
+            print('.', end='', flush=True)
         print()
