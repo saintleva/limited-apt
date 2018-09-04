@@ -22,18 +22,16 @@
 
 
 import os
-
 import sys
 import argparse
-import apt.progress.text
 import apt.progress.base
+import apt.progress.text
 from limitedapt.errors import StubError
 from limitedapt.runners import *
 from limitedapt.constants import *
+from limitedapt.debug import debug_suidbit
 from exitcodes import ExitCodes
 import consoleui
-from argparse import Action
-
 
 DEBUG = True
 
@@ -47,8 +45,7 @@ def print_error(*args):
 def privileged_main():
     
     if DEBUG:
-        print("privileged_main():")
-        print('UID = {0}, EUID = {1}'.format(os.getuid(), os.geteuid()))
+        debug_suidbit("privileged_main()")
         print(sys.argv)
         
         import time
@@ -165,6 +162,8 @@ def privileged_main():
     # Parse and analyse arguments
     
     args = parser.parse_args(sys.argv[2:])
+    
+    debug_suidbit("After command-line parsing")
         
     simulate_mode = args.simulate if hasattr(args, 'simulate') else None
     prompt_mode = args.prompt if hasattr(args, 'prompt') else None
@@ -179,6 +178,8 @@ def privileged_main():
     progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
     runner = Runner(user_id, modes, consoleui.ErrorHandlers(), consoleui.Applying(), progresses, sys.stderr) 
         
+    debug_suidbit('After creating "runner" object')
+    
     try:
         if args.subcommand == 'update':
             runner.update()

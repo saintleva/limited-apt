@@ -18,7 +18,6 @@
 
 import os
 import time
-import functools
 from limitedapt.constants import *
 
 
@@ -30,7 +29,7 @@ def get_terminal_width():
         return int(columns)
     except:
         return 80 # default value
-
+    
 
 class Modded:
     
@@ -48,6 +47,8 @@ class Applying(Modded):
     def show_changes(self, cache, is_upgrading=False):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
+
+        changes = cache.get_changes()
             
         def print_onetype_operation_package_list(pkg_predicate, header):
             
@@ -57,10 +58,10 @@ class Applying(Modded):
             else:
                 def suffixed_package_name(pkg):
                     return pkg.name + '{a}' if pkg.is_auto_installed else pkg.name   
-            
+                                    
             terminal_width = get_terminal_width()
-                
-            package_list = sorted((pkg for pkg in cache.get_changes() if pkg_predicate(pkg)), key=lambda pkg: pkg.name)
+            
+            package_list = sorted((pkg for pkg in changes if pkg_predicate(pkg)), key=lambda pkg: pkg.name)
             if len(package_list) > 0:
                 print(header)
                 line = '  '
@@ -94,9 +95,10 @@ class Applying(Modded):
         print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
                                              'These packages will be kept at they current version:')
         
+        update_count = sum(1 for pkg in changes if pkg.marked_upgrade and not pkg.marked_install)
+        #TODO: Calculate count of "have not been updated"        
         print('''{0} packages will be updated, {1} new will be installed, {2} marked for deletion, '''
-              '''{3} have not been updated.'''.format(1000, cache.install_count, cache.delete_count,
-                                                      1000))
+              '''{3} have not been updated.'''.format(update_count, cache.install_count, cache.delete_count, 1000))
         #TODO: Implement KB, MB, Gb, ...
         print('''Required to download {0} archives. {1} will be occupied after unpacking.'''.
               format(cache.required_download, cache.required_space))
@@ -110,7 +112,6 @@ class Applying(Modded):
             if answer.startswith('N') or answer.startswith('n'):
                 return False 
             print('Incorrect answer.')
-
 
 
 class ErrorHandlers(Modded):
