@@ -29,7 +29,7 @@ import apt.progress.text
 from limitedapt.errors import StubError
 from limitedapt.runners import *
 from limitedapt.constants import *
-from limitedapt.debug import debug_suidbit
+from limitedapt import debug
 from exitcodes import ExitCodes
 import consoleui
 
@@ -46,12 +46,8 @@ def privileged_main():
     
     if DEBUG:
         debug_suidbit("privileged_main()")
-        print(sys.argv)
+        print('PROGRAM ARGUMENTS: ', sys.argv)
         
-        import time
-        time_path = os.path.join('/sbin/test', str(time.time()))
-        os.makedirs(time_path)
-        print()
     
     #TODO: How must I to compute "user_id"?
     user_id = os.getuid()
@@ -163,8 +159,6 @@ def privileged_main():
     
     args = parser.parse_args(sys.argv[2:])
     
-    debug_suidbit("After command-line parsing")
-        
     simulate_mode = args.simulate if hasattr(args, 'simulate') else None
     prompt_mode = args.prompt if hasattr(args, 'prompt') else None
     fatal_errors_mode = args.fatal_errors if hasattr(args, 'fatal_errors') else None
@@ -178,8 +172,6 @@ def privileged_main():
     progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
     runner = Runner(user_id, modes, consoleui.ErrorHandlers(), consoleui.Applying(), progresses, sys.stderr) 
         
-    debug_suidbit('After creating "runner" object')
-    
     try:
         if args.subcommand == 'update':
             runner.update()

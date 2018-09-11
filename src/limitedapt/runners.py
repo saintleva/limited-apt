@@ -27,7 +27,6 @@ from limitedapt.errors import *
 from limitedapt.packages import *
 from limitedapt.coownership import *
 from limitedapt.enclosure import *
-from limitedapt.debug import debug_suidbit
 
 
 
@@ -290,9 +289,7 @@ class Runner:
                     
     def __examine_and_apply_changes(self, cache, enclosure, is_upgrading=False):
         changes = cache.get_changes()
-        debug_suidbit('__examine_and_apply_changes() after "cache.get_changes()"')        
         self.applying_ui.show_changes(cache, is_upgrading)
-        debug_suidbit('__examine_and_apply_changes() after "show_changes()"')        
         if not changes:
             raise GoodExit()
               
@@ -315,7 +312,6 @@ class Runner:
                 if pkg.marked_install and versioned_package not in enclosure:
                     self.handlers.may_not_install(pkg)
                     check_fatal()
-                    
                 if pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
                     self.handlers.may_not_upgrade_to_new(pkg, pkg.candidate.version)
                     check_fatal()
@@ -326,6 +322,7 @@ class Runner:
                     self.handlers.may_not_keep()
                     check_fatal()
                 if pkg.marked_delete:
+                    #TODO: Permit user to remove own packages 
                     self.handlers.may_not_remove(pkg)
                     check_fatal()
 
@@ -363,7 +360,6 @@ class Runner:
         if self.applying_ui.prompt_agree():
             try:
                 if not self.modes.simulate:
-                    debug_suidbit('__examine_and_apply_changes() before "cache.commit()"')        
                     cache.commit(self.progresses.acquire, self.progresses.install)
                 else:
                     self.handlers.simulate()
@@ -377,13 +373,9 @@ class Runner:
     def upgrade(self, full_upgrade=True):
         if not self.has_privileges:
             raise YouMayNotUpgradeError(full_upgrade)
-        debug_suidbit('upgrade() before "cache" getting')        
         cache = apt.Cache()
-        debug_suidbit('upgrade() after "cache" getting')        
         enclosure = self.__load_enclosure()
-        debug_suidbit('upgrade() after enclosure loading')        
         cache.upgrade(full_upgrade)
-        debug_suidbit('upgrade() after "cache.upgrade()"')        
         self.__examine_and_apply_changes(cache, enclosure, is_upgrading=True)        
               
     def perform_operations(self, operation_tasks):
