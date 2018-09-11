@@ -29,7 +29,7 @@ import apt.progress.text
 from limitedapt.errors import StubError
 from limitedapt.runners import *
 from limitedapt.constants import *
-from limitedapt import debug
+from limitedapt.debug import debug_suidbit
 from exitcodes import ExitCodes
 import consoleui
 
@@ -50,13 +50,13 @@ def privileged_main():
         
     
     #TODO: How must I to compute "user_id"?
-    user_id = os.getuid()
-#     # extract first program argument as id of real user
-#     try:
-#         user_id = int(sys.argv[1]) 
-#     except:
-#         print('This privileged script has been run incorrectly', file=sys.stderr)
-#         sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
+    #user_id = os.getuid()
+    # extract first program argument as id of real user
+    try:
+        user_id = int(sys.argv[1]) 
+    except:
+        print('This privileged script has been run incorrectly', file=sys.stderr)
+        sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
         
     # Create parser
     

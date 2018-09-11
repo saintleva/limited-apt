@@ -19,6 +19,7 @@
 import os
 import time
 from limitedapt.constants import *
+from metrics import *
 
 
 #TODO: Is it right?
@@ -98,10 +99,9 @@ class Applying(Modded):
         update_count = sum(1 for pkg in changes if pkg.marked_upgrade and not pkg.marked_install)
         #TODO: Calculate count of "have not been updated"        
         print('''{0} packages will be updated, {1} new will be installed, {2} marked for deletion, '''
-              '''{3} have not been updated.'''.format(update_count, cache.install_count, cache.delete_count, 1000))
-        #TODO: Implement KB, MB, Gb, ...
+              .format(update_count, cache.install_count, cache.delete_count))
         print('''Required to download {0} archives. {1} will be occupied after unpacking.'''.
-              format(cache.required_download, cache.required_space))
+              format(pretty_size(cache.required_download), pretty_size(cache.required_space)))
     
     def prompt_agree(self):
         while True:

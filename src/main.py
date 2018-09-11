@@ -41,9 +41,9 @@ def main():
 #    subprocess.call(['executor'] + sys.argv[1:])
 
     print('main()')
-    print(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE] + sys.argv[1:])
+    print(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
     print()
-    exitcode = subprocess.call(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE] + sys.argv[1:])
+    exitcode = subprocess.call(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
 
     sys.exit(exitcode)
     
