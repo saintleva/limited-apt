@@ -101,7 +101,7 @@ class Applying(Modded):
         print('''{0} packages will be updated, {1} new will be installed, {2} marked for deletion, '''
               .format(update_count, cache.install_count, cache.delete_count))
         print('''Required to download {0} archives. {1} will be occupied after unpacking.'''.
-              format(pretty_size(cache.required_download), pretty_size(cache.required_space)))
+              format(pretty_size_str(cache.required_download), pretty_size_str(cache.required_space)))
     
     def prompt_agree(self):
         while True:
@@ -125,11 +125,11 @@ class ErrorHandlers(Modded):
     def may_not_install(self, pkg, is_auto_installed_yet=False):
         name = self.modes.pkg_str(pkg)
         if is_auto_installed_yet:
-            print('''Error: package "{0}" which you want to install is system-constitutive and nobody '''
-                  '''but root may install or it '''.format(name))
-        else:
             print('''Error: package "{0}" which you want to install is system-constitutive and nobody but '''
                   '''root may install it or throw down "auto-installed" mark from them'''.format(name))
+        else:
+            print('''Error: package "{0}" which you want to install is system-constitutive and nobody '''
+                  '''but root may install or it '''.format(name))
         
 #TODO: remove it:
 #    def may_not_upgrade_system_constitutive(self, pkg_name, version):

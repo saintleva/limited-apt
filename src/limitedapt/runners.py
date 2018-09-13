@@ -215,7 +215,7 @@ class Runner:
     def __check_user_privileges(self):
         self.__has_privileges = self.username == "root" or \
             self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
-        self.__may_upgrade_package = \
+        self.__may_upgrade_package = self.username == "root" or \
             self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME)
         self.__debug_message('''your username is: "{0}", ''' \
                              '''you has privileges for modification operations: "{1}", ''' \
@@ -461,7 +461,7 @@ class Runner:
                 self.handlers.cannot_find_package(package_name)
 
         purge_tasks = operation_tasks.get("purge", [])
-        self.__debug_message("you want to physically remove" + list_to_str(purge_tasks))
+        self.__debug_message("you want to purge" + list_to_str(purge_tasks))
         for package_name in purge_tasks:
             try:
                 pkg = cache[package_name]

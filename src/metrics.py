@@ -43,7 +43,12 @@ def pretty_size(byte_count):
         cls += 1
                 
     return metric_prefixes[cls], round(current_quantity)
- 
+
+
+def pretty_size_str(byte_count):
+    prefix, size = pretty_size(byte_count)
+    return str(size) + prefix
+
                
 if __name__ == '__main__':
     import doctest
