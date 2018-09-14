@@ -452,7 +452,7 @@ class Runner:
                     self.handlers.may_not_physically_remove(pkg.name)
                 else:
                     try:
-                        coownership.remove_package(concrete_package)
+                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.architecture()))
                     except PackageIsNotInstalled:
                         self.handlers.physical_removation(pkg.name)
                     finally:

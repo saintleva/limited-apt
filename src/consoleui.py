@@ -100,8 +100,11 @@ class Applying(Modded):
         #TODO: Calculate count of "have not been updated"        
         print('''{0} packages will be updated, {1} new will be installed, {2} marked for deletion, '''
               .format(update_count, cache.install_count, cache.delete_count))
-        print('''Required to download {0} archives. {1} will be occupied after unpacking.'''.
-              format(pretty_size_str(cache.required_download), pretty_size_str(cache.required_space)))
+        print('''Required to download {0} archives. '''.format(pretty_size_str(cache.required_download)), end='')
+        if cache.required_space >= 0:
+            print('''{0} will be occupied after unpacking.'''.format(pretty_size_str(cache.required_space)))
+        else:
+            print('''{0} will be freed unpacking.'''.format(pretty_size_str(-cache.required_space)))
     
     def prompt_agree(self):
         while True:
