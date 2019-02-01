@@ -182,6 +182,7 @@ class Runner:
     def progresses(self):
         return self.__progresses
     
+    @property
     def debug_stream(self):
         return self.__debug_stream
        

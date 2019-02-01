@@ -55,7 +55,7 @@ def privileged_main():
     try:
         user_id = int(sys.argv[1]) 
     except:
-        print('This privileged script has been run incorrectly', file=sys.stderr)
+        print_error('This privileged script has been run incorrectly')
         sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
         
     # Create parser
