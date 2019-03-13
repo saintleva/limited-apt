@@ -10,7 +10,7 @@ from limitedapt.constants import *
 
 def add_user(name):
     subprocess.call(["useradd", "--password={0}".format(crypt.crypt(name)),
-                     "--base-dir=/home/test", "--create-home", name])
+                     "--base-dir=/home/test",  "--shell=/bin/bash", "--create-home", name])
 
 def add_group(name):
     subprocess.call(["addgroup", name])

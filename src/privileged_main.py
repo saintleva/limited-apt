@@ -226,7 +226,7 @@ def privileged_main():
     except WritingConfigFilesError as err:
         print_error('''Error number "{0}" appeared while reading config file "{1}"'''.
                     format(err.error_number, err.filename))
-        sys.exit(ExitCodes.ERROR_WHILE_READING_CONFIG_FILES)        
+        sys.exit(ExitCodes.ERROR_WHILE_WRITING_CONFIG_FILES)        
     except EnclosureImportSyntaxError:
         print_error('Error while parsing enclosure')
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)

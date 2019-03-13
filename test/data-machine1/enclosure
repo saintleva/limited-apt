@@ -1,0 +1,269 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<enclosure>
+  <package name="3dchess">
+    <arch name="amd64">
+      <everyversion/>
+    </arch>
+    <arch name="armel">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="armhf">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="i386">
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="kfreebsd-amd64">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="kfreebsd-i386">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="mips">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="mipsel">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="powerpc">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="s390x">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+    <arch name="sparc">
+      <version number="0.8.1-16"/>
+      <version number="0.8.1-17"/>
+    </arch>
+  </package>
+  <package name="blobwars-data">
+    <arch name="all">
+      <version number="1.19-2"/>
+      <version number="2.00-1"/>
+    </arch>
+  </package>
+  <package name="extremetuxracer">
+    <everyarch>
+      <version number="0.4-5"/>
+      <version number="0.7.4-1"/>
+    </everyarch>
+  </package>
+  <package name="extremetuxracer-data">
+    <arch name="all">
+      <version number="0.4-5"/>
+      <version number="0.7.4-1"/>
+    </arch>
+  </package>
+  <package name="extremetuxracer-extras">
+    <arch name="all">
+      <everyversion/>
+    </arch>
+  </package>
+  <package name="extremetuxracer-gimp-dev">
+    <arch name="all">
+      <everyversion/>
+    </arch>
+  </package>
+  <package name="gnuchess">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="hdparm">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libaribb24-0">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libaribb25-0">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libboost-dev">
+    <arch name="all">
+      <version number="1.50"/>
+    </arch>
+  </package>
+  <package name="libc6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libfaad2">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libgcc1">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libglib2.0-0">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libglib2.0-data">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libnfs11">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libpagemaker-0.0-0">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libplacebo2">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libprotobuf-lite10">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libqt5webkit5">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl-image1.2">
+    <everyarch>
+      <version number="1.2.10-2+b2"/>
+      <version number="1.2.12-2"/>
+      <version number="1.2.12-5+b2"/>
+      <version number="1.2.12-5+b8"/>
+    </everyarch>
+  </package>
+  <package name="libsdl-net1.2">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl-ttf2.0-0">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libsdl1.2debian">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libstdc++6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libva-wayland2">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libvlccore9">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libvte-2.91-0">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libvte-2.91-common">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libvulkan1">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="libxt6">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="python3">
+    <arch name="amd64">
+      <version number="3.4"/>
+    </arch>
+  </package>
+  <package name="qml-module-qtwebkit">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="synaptic">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="xaw3dg">
+    <everyarch>
+      <version number="1.5+E-18"/>
+      <version number="1.5+E-18.2"/>
+    </everyarch>
+  </package>
+  <package name="zlib1g">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="debian-policy-ja">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="calligra-l10n-de">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="389-ds-console-doc">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="4ti2-doc">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="eclipse-titan">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="liblivemedia64">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+  <package name="linux-image-4.18.0-1-amd64">
+    <everyarch>
+      <everyversion/>
+    </everyarch>
+  </package>
+</enclosure>

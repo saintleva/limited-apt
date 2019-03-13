@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<packages>
+  <package arch="amd64" name="389-ds-console-doc">
+    <user name="root"/>
+  </package>
+  <package arch="amd64" name="eclipse-titan">
+    <user name="root"/>
+  </package>
+  <package arch="amd64" name="juk">
+    <user name="james"/>
+    <user name="root"/>
+  </package>
+  <package arch="amd64" name="kde-l10n-ru">
+    <user name="james"/>
+    <user name="root"/>
+  </package>
+  <package arch="amd64" name="libvlccore8">
+    <user name="james"/>
+  </package>
+  <package arch="amd64" name="nano">
+    <user name="james"/>
+    <user name="root"/>
+  </package>
+  <package arch="amd64" name="synaptic">
+    <user name="anthony"/>
+    <user name="root"/>
+  </package>
+  <package arch="amd64" name="vlc-nox">
+    <user name="james"/>
+  </package>
+</packages>

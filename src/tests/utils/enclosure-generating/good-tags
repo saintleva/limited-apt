@@ -1,0 +1,23 @@
+role::documentation 
+
+role::app-data 
+
+role::data
+
+role::debug-symbols
+
+role::source && ! use::driver
+
+role::metapackage
+
+role::examples
+
+role::program && ! (security::antivirus || security::firewall)
+
+! (admin::configuring && admin::filesystem && admin::logging)
+
+! (admin::logging && interface::daemon)
+
+! (admin::kernel && interface::daemon)
+
+! admin::TODO

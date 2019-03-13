@@ -32,7 +32,7 @@ class TerminationError(Error):
 
 class GoodExit(TerminationError): pass
 
-class GroupError(TerminationError):
+class GroupProblem:
     
     def __init__(self, group_name):
         self.__group_name = group_name
@@ -43,7 +43,7 @@ class GroupError(TerminationError):
     
 class YouHaveNotPrivilegesError(Error): pass
 
-class YouHaveNotUserPrivilegesError(YouHaveNotPrivilegesError, GroupError): pass
+class YouHaveNotUserPrivilegesError(YouHaveNotPrivilegesError, GroupProblem): pass
 
 class YouMayNotUpdateError(YouHaveNotUserPrivilegesError): pass
 
@@ -60,7 +60,7 @@ class YouMayNotPerformError(YouHaveNotUserPrivilegesError): pass
 
 class YouMayNotPurgeError(YouHaveNotPrivilegesError): pass
 
-class GroupNotExistError(GroupError): pass
+class GroupNotExistError(TerminationError, GroupProblem): pass
 
 class ConfigFilesIOError(TerminationError):
     

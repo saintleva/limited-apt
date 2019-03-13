@@ -24,6 +24,6 @@ DEBUG = True
 
 def path_to_program_config():
     if DEBUG:
-        return "/home/anthony/projects/limited-apt/src/tests/var/"
+        return "/mnt/limited-apt-data/"
     else:
         return NotImplemented
