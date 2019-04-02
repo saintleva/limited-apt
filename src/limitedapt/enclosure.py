@@ -103,6 +103,19 @@ class ArchAndVersions:
         else:
             assert arch is not None
             self.__data[arch] = versions
+            
+    def add_single(self, version, arch=None):
+        if self.every:
+            assert arch is None            
+            self.every.add(version)
+        else:
+            assert arch is not None
+            try:
+                self.__data[arch].add(version)
+            except KeyError:
+                versions = Versions()
+                versions.add(version)
+                self.__data.add(versions)
         
         
 class Enclosure:
@@ -126,6 +139,14 @@ class Enclosure:
         if name in self.__packages:
             raise CannotAddExistingPackage("Package '{0}' is already in the eclosure".format(name))
         self.__packages[name] = arch_and_versions
+        
+    def add_versioned_package(self, name, arch, version):
+        try:
+            self.__packages[name].add_single(version, arch)
+        except KeyError:
+            arch_and_versions = ArchAndVersions()
+            arch_and_versions.add_single(version, arch)
+            self.__packages.add(arch_and_versions)
         
     def export_to_xml(self, file):
         root = etree.Element("enclosure")
