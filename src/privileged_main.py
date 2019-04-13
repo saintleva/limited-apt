@@ -56,7 +56,7 @@ def privileged_main():
         user_id = int(sys.argv[1]) 
     except:
         print_error('This privileged script has been run incorrectly')
-        sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY)
+        sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY.value)
         
     # Create parser
     
@@ -131,7 +131,7 @@ def privileged_main():
             return OperationPair('unmarkauto', operation[:-2])
         else:
             print_error('''Error: invalid operation on the suffix''')              
-            sys.exit(ExitCodes.INVALID_OPERATION_ON_THE_SUFFIX)
+            sys.exit(ExitCodes.INVALID_OPERATION_ON_THE_SUFFIX.value)
         
     diverse_parser = subparsers.add_parser('diverse', parents=[parent_operation_parser])
     diverse_parser.add_argument('package_operations', nargs='*', metavar='operation',
@@ -202,7 +202,7 @@ def privileged_main():
                     operation_tasks[operation_pair.command] = [operation_pair.package]
             runner.perform_operations(operation_tasks)
     except GoodExit:
-        sys.exit(ExitCodes.GOOD)
+        sys.exit(ExitCodes.GOOD.value)
     except YouHaveNotUserPrivilegesError as err:
         if isinstance(err, YouMayNotUpdateError):
             action_str = "update package list"
@@ -212,39 +212,41 @@ def privileged_main():
             action_str = "perform these operations"
         print_error('''Error: you have not privileges to {0}: you must be root or a member of "{1}" group'''.
                     format(action_str, err.group_name))
-        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES)
+        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
+    except AttempToPerformSystemComposingError:
+        sys.exit(ExitCodes.ATTEMPT_TO_PERFORM_SYSTEM_COMPOSING.value)
     except YouMayNotPurgeError:
         print_error('''Error: only root can purge packages and use "--purge-unused" option''')              
-        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES)
+        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
     except GroupNotExistError as err:
         print_error('''Error: "{0}" group doesn't exist'''.format(err.group_name))
-        sys.exit(ExitCodes.GROUP_NOT_EXIST)
+        sys.exit(ExitCodes.GROUP_NOT_EXIST.value)
     except ReadingConfigFilesError as err:
         print_error('''Error number "{0}" appeared while reading config file "{1}"'''.
                     format(err.error_number, err.filename))
-        sys.exit(ExitCodes.ERROR_WHILE_READING_CONFIG_FILES)
+        sys.exit(ExitCodes.ERROR_WHILE_READING_CONFIG_FILES.value)
     except WritingConfigFilesError as err:
         print_error('''Error number "{0}" appeared while reading config file "{1}"'''.
                     format(err.error_number, err.filename))
-        sys.exit(ExitCodes.ERROR_WHILE_WRITING_CONFIG_FILES)        
+        sys.exit(ExitCodes.ERROR_WHILE_WRITING_CONFIG_FILES.value)
     except EnclosureImportSyntaxError:
         print_error('Error while parsing enclosure')
-        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES.value)
     except CoownershipImportSyntaxError:
         print_error('Error while parsing coownership-list')
-        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES)
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES.value)
     except LockFailedError as err:
         print_error('CANNOT LOCK: ', err)
-        sys.exit(ExitCodes.LOCK_FAILED)
+        sys.exit(ExitCodes.LOCK_FAILED.value)
     except FetchCancelledError as err:
         print_error('Error: fetch cancelled')              
-        sys.exit(ExitCodes.FETCH_CANCELLED)
+        sys.exit(ExitCodes.FETCH_CANCELLED.value)
     except FetchFailedError as err:
         print_error('Error: fetch cancelled')              
-        sys.exit(ExitCodes.FETCH_FAILED)                    
+        sys.exit(ExitCodes.FETCH_FAILED.value)
     except StubError as err:
         print_error('It is a stub: ', err)
-        sys.exit(ExitCodes.STUB)
+        sys.exit(ExitCodes.STUB.value)
 
 
 if __name__ == '__main__':

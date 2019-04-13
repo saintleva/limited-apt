@@ -15,15 +15,15 @@ from limitedapt.enclosure import *
 #             if len(words) == 4:
 #                 yield words[1]
 
-def add_package(cache, enclosure, name, arch, version):
-    cache = apt.Cache()
-#    print("PACKAGE ARCHITECTURE: {0}".format(pkg.architecture()))
- 
-    versions = Versions()
-    versions.add(version)   
-    arch_and_versions = ArchAndVersions()
-    arch_and_versions.add(versions, arch)
-    enclosure.add_package(name, arch_and_versions)
+# def add_package(cache, enclosure, name, arch, version):
+#     cache = apt.Cache()
+# #    print("PACKAGE ARCHITECTURE: {0}".format(pkg.architecture()))
+#  
+#     versions = Versions()
+#     versions.add(version)   
+#     arch_and_versions = ArchAndVersions()
+#     arch_and_versions.add(versions, arch)
+#     enclosure.add_package(name, arch_and_versions)
 
 def main():
     query = 'role::documentation || role::app-data || role::data || role::debug-symbols || ' + \
@@ -38,15 +38,16 @@ def main():
     seriated_names = [line.partition(" ")[0] for line in lines]
     names = list(key for key, _ in itertools.groupby(seriated_names))
     
+    print(len(names))
+    
     enclosure = Enclosure()
+    enclosure.import_from_xml("abc")
     cache = apt.Cache()
     for name in names:
         pkg = cache[name]
-        enclosure.add_versioned_package(pkg.shortname, pkg.candidate.architecture(), pkg.candidate.version)
-        
-    import sys
-    enclosure.export_to_xml(sys.stdout)
+        enclosure.add_versioned_package(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
 
-
+    enclosure.export_to_xml("abcd")
+    
 if __name__ == '__main__':
     main()

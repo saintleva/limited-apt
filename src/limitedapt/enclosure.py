@@ -1,4 +1,3 @@
-#
 # Copyright (C) Anton Liaukevich 2011-2015 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
@@ -115,7 +114,7 @@ class ArchAndVersions:
             except KeyError:
                 versions = Versions()
                 versions.add(version)
-                self.__data.add(versions)
+                self.__data[arch] = versions
         
         
 class Enclosure:
@@ -140,13 +139,13 @@ class Enclosure:
             raise CannotAddExistingPackage("Package '{0}' is already in the eclosure".format(name))
         self.__packages[name] = arch_and_versions
         
-    def add_versioned_package(self, name, arch, version):
+    def add_versioned_package(self, versioned):
         try:
-            self.__packages[name].add_single(version, arch)
+            self.__packages[versioned.name].add_single(versioned.version, versioned.architecture)
         except KeyError:
             arch_and_versions = ArchAndVersions()
-            arch_and_versions.add_single(version, arch)
-            self.__packages.add(arch_and_versions)
+            arch_and_versions.add_single(versioned.version, versioned.architecture)
+            self.__packages[versioned.name] = arch_and_versions
         
     def export_to_xml(self, file):
         root = etree.Element("enclosure")
@@ -181,7 +180,7 @@ class Enclosure:
                         arch_and_versions = ArchAndVersions(isevery=True)
                         everyversion_element = everyarch_element.find("everyversion")
                         if everyversion_element is not None:
-                            arch_and_versions.every = Versions(isevery=True)
+                            arch_and_versions.every = Versions(isevery=True )
                         else:
                             versions = Versions()
                             for version_element in everyarch_element.findall("version"):

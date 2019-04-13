@@ -20,10 +20,12 @@ UNIX_LIMITEDAPT_GROUPNAME = 'limited-apt'
 UNIX_LIMITEDAPT_ROOTS_GROUPNAME = 'limited-apt-roots'
 UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME = 'limited-apt-upgraders'
 
-DEBUG = True
+DEBUG = False
 
 def path_to_program_config():
     if DEBUG:
         return "/mnt/limited-apt-data/"
     else:
-        return NotImplemented
+        return "/var/lib/limited-apt/"
+    
+#ENCLOSURE_BY_DEBTAGS_DEBUG = True

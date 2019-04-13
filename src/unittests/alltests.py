@@ -17,9 +17,14 @@
 #
 
 
-from unittests.test_coownership import *
-from unittests.test_enclosure import *
-from unittests.test_files import *
+#TODO: remove this
+# from unittests.test_coownership import *
+# from unittests.test_enclosure import *
+# from unittests.test_files import *
+
+from test_coownership import *
+from test_enclosure import *
+from test_files import *
 
      
 if __name__ == "__main__":

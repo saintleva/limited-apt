@@ -22,14 +22,14 @@ import os.path
 import apt
 import apt_pkg
 import apt.progress.base
-from limitedapt import constants, coownership
+from limitedapt import constants, coownership, debug
 from limitedapt.errors import *
 from limitedapt.packages import *
 from limitedapt.coownership import *
 from limitedapt.enclosure import *
 
 
-
+DEBUG = True
 
 class OperationPair:
     
@@ -112,6 +112,16 @@ class Modes:
     def fatal_errors(self):
         return self.__fatal_errors
   
+class Modded:
+    
+    @property
+    def modes(self):
+        return self.__modes
+    
+    @modes.setter
+    def modes(self, modes):
+        self.__modes = modes
+
      
 class Progresses:
     
@@ -231,11 +241,17 @@ class Runner:
     
     def update_eclosure(self):
         #TODO: Implement enclosure updating
-        raise StubError('"update-enclosure" command has not implemented yet')
+        filename = os.path.join(constants.path_to_program_config(), 'enclosure')
+        if DEBUG:
+            self.__debug_message('''updating enclosure in the file "{0}" ...'''.format(filename))
+            debug.update_enclosure_by_debtags(filename)            
+        else:
+            raise StubError('Real enclosure updating has not implemented yet')
+            
 
     def update(self):
         if not self.has_privileges:
-            raise YouMayNotUpdateError()
+            raise YouMayNotUpdateError(constants.UNIX_LIMITEDAPT_GROUPNAME)
         cache = apt.Cache()
         cache.update(self.progresses.fetch)
         cache.open(None) #TODO: Do I really need to re-open the cache here?    
@@ -258,8 +274,8 @@ class Runner:
                              format(filename))
         try:
             coownership_list.export_to_xml(filename)
-        except IOError:
-            raise WritingConfigFilesError()
+        except IOError as err:
+            raise WritingConfigFilesError(filename, err.errno)
 
     def __load_enclosure(self):
         filename = os.path.join(constants.path_to_program_config(), 'enclosure')
@@ -364,16 +380,19 @@ class Runner:
                     cache.commit(self.progresses.acquire, self.progresses.install)
                 else:
                     self.handlers.simulate()
+                raise GoodExit()
             except apt.cache.LockFailedException as err:
                 raise LockFailedError(err)
             except apt.cache.FetchCancelledException as err:
                 raise FetchCancelledError(err)
             except apt.cache.FetchFailedException as err:
                 raise FetchFailedError(err)
-            
+        else:
+            raise GoodExit()
+
     def upgrade(self, full_upgrade=True):
         if not self.has_privileges:
-            raise YouMayNotUpgradeError(full_upgrade)
+            raise YouMayNotUpgradeError(constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME, full_upgrade)
         cache = apt.Cache()
         enclosure = self.__load_enclosure()
         cache.upgrade(full_upgrade)
@@ -381,7 +400,7 @@ class Runner:
               
     def perform_operations(self, operation_tasks):
         if not self.has_privileges:
-            raise YouMayNotPerformError()
+            raise YouMayNotPerformError(constants.UNIX_LIMITEDAPT_GROUPNAME)
 
         cache = apt.Cache()
         

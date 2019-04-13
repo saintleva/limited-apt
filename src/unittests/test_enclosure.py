@@ -24,34 +24,47 @@ from limitedapt.enclosure import *
 class EnclosureTestCase(unittest.TestCase):
     
     def test_extremetuxracer(self):
-        __enclosure = Enclosure()
-        __enclosure.import_from_xml("data/extremetuxracer-enclosure-orig")
-        self.assertNotIn(VersionedPackage("extremetuxracer", "some-arch", "0.0.1"), __enclosure)
-        self.assertIn(VersionedPackage("extremetuxracer", "some-arch", "0.4-5"), __enclosure)
-
+        enclosure = Enclosure()
+        enclosure.import_from_xml("data/extremetuxracer-enclosure-orig")
+        self.assertNotIn(VersionedPackage("extremetuxracer", "some-arch", "0.0.1"), enclosure)
+        self.assertIn(VersionedPackage("extremetuxracer", "some-arch", "0.4-5"), enclosure)
 
     def test_contains(self):
-        __enclosure = Enclosure()
-        __enclosure.import_from_xml("data/enclosure1-orig")
+        enclosure = Enclosure()
+        enclosure.import_from_xml("data/enclosure1-orig")
         
-        self.assertNotIn(VersionedPackage("systemsettings", "amd64", "1.0"), __enclosure)
+        self.assertNotIn(VersionedPackage("systemsettings", "amd64", "1.0"), enclosure)
          
-        self.assertIn(VersionedPackage("3dchess", "amd64", "0.0.1"), __enclosure)
-        self.assertIn(VersionedPackage("3dchess", "armel", "0.8.1-17"), __enclosure)
-        self.assertNotIn(VersionedPackage("3dchess", "armel", "0.0.2"), __enclosure)
+        self.assertIn(VersionedPackage("3dchess", "amd64", "0.0.1"), enclosure)
+        self.assertIn(VersionedPackage("3dchess", "armel", "0.8.1-17"), enclosure)
+        self.assertNotIn(VersionedPackage("3dchess", "armel", "0.0.2"), enclosure)
          
-        self.assertIn(VersionedPackage("libc6", "sparc", "0.0.1"), __enclosure)
-        self.assertIn(VersionedPackage("libxt6", "sparc", "0.0.1"), __enclosure)
-        self.assertIn(VersionedPackage("libxt6", "some", "0.0.2"), __enclosure)
+        self.assertIn(VersionedPackage("libc6", "sparc", "0.0.1"), enclosure)
+        self.assertIn(VersionedPackage("libxt6", "sparc", "0.0.1"), enclosure)
+        self.assertIn(VersionedPackage("libxt6", "some", "0.0.2"), enclosure)
          
-        self.assertIn(VersionedPackage("libsdl-image1.2", "i386", "1.2.10-2+b2"), __enclosure)
-        self.assertIn(VersionedPackage("libsdl-image1.2", "i386", "1.2.12-2"), __enclosure)
-        self.assertNotIn(VersionedPackage("libsdl-image1.2", "i386", "0.0.1"), __enclosure)
-        self.assertIn(VersionedPackage("libsdl-image1.2", "amd64", "1.2.12-2"), __enclosure)
-        self.assertIn(VersionedPackage("libsdl-image1.2", "amd64", "1.2.12-5+b2"), __enclosure)
+        self.assertIn(VersionedPackage("libsdl-image1.2", "i386", "1.2.10-2+b2"), enclosure)
+        self.assertIn(VersionedPackage("libsdl-image1.2", "i386", "1.2.12-2"), enclosure)
+        self.assertNotIn(VersionedPackage("libsdl-image1.2", "i386", "0.0.1"), enclosure)
+        self.assertIn(VersionedPackage("libsdl-image1.2", "amd64", "1.2.12-2"), enclosure)
+        self.assertIn(VersionedPackage("libsdl-image1.2", "amd64", "1.2.12-5+b2"), enclosure)
 
-        self.assertNotIn(VersionedPackage("extremetuxracer", "some-arch", "0.0.1"), __enclosure)
-        self.assertIn(VersionedPackage("extremetuxracer", "some-arch", "0.4-5"), __enclosure)
+        self.assertNotIn(VersionedPackage("extremetuxracer", "some-arch", "0.0.1"), enclosure)
+        self.assertIn(VersionedPackage("extremetuxracer", "some-arch", "0.4-5"), enclosure)
+                
+    def test_add_versioned(self):
+        enclosure = Enclosure()
+        enclosure.import_from_xml("data/enclosure1-orig")
+                
+        enclosure.add_versioned_package(VersionedPackage("3dchess", "alpha", "1.1"))
+        with self.assertRaises(VersionsEveryAndDistinctError):
+            enclosure.add_versioned_package(VersionedPackage("3dchess", "amd64", "1.1"))
+        enclosure.add_versioned_package(VersionedPackage("3dchess", "i386", "0.8.1-18"))
+        
+        self.assertIn(VersionedPackage("3dchess", "alpha", "1.1"), enclosure)
+        self.assertIn(VersionedPackage("3dchess", "i386", "0.8.1-18"), enclosure)
+        self.assertNotIn(VersionedPackage("aaa", "i8086", "1.1"), enclosure)
+        
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

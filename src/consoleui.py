@@ -16,33 +16,23 @@
 #
 
 
-import os
 import time
+import subprocess
 from limitedapt.constants import *
+from limitedapt.runners import Modded
 from metrics import *
 
 
 #TODO: Is it right?
 #@functools.lru_cache
 def get_terminal_width():
-    try:
-        columns = os.popen('stty size', 'r').read().split()[1]
+    try:        
+        columns = subprocess.getoutput("stty size").split()[1]
         return int(columns)
     except:
         return 80 # default value
     
-
-class Modded:
-    
-    @property
-    def modes(self):
-        return self.__modes
-    
-    @modes.setter
-    def modes(self, modes):
-        self.__modes = modes
-
-        
+     
 class Applying(Modded):
     
     def show_changes(self, cache, is_upgrading=False):

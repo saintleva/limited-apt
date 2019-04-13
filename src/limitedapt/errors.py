@@ -43,24 +43,37 @@ class GroupProblem:
     
 class YouHaveNotPrivilegesError(Error): pass
 
-class YouHaveNotUserPrivilegesError(YouHaveNotPrivilegesError, GroupProblem): pass
+class YouHaveNotUserPrivilegesError(YouHaveNotPrivilegesError, GroupProblem):
+    
+    def __init__(self, group_name):
+        GroupProblem.__init__(group_name)
 
-class YouMayNotUpdateError(YouHaveNotUserPrivilegesError): pass
+class YouMayNotUpdateError(YouHaveNotUserPrivilegesError):
+    
+    def __init__(self, group_name):
+        super().__init__(group_name)
 
 class YouMayNotUpgradeError(YouHaveNotUserPrivilegesError):
     
-    def __init__(self, full_upgrade):
+    def __init__(self, group_name, full_upgrade):
+        super().__init__(group_name)
         self.__full_upgrade = full_upgrade
         
     @property
     def full_upgrade(self):
         return self.__full_upgrade
 
-class YouMayNotPerformError(YouHaveNotUserPrivilegesError): pass
+class YouMayNotPerformError(YouHaveNotUserPrivilegesError):
+    
+    def __init__(self, group_name):
+        super().__init__(group_name)
 
 class YouMayNotPurgeError(YouHaveNotPrivilegesError): pass
 
-class GroupNotExistError(TerminationError, GroupProblem): pass
+class GroupNotExistError(TerminationError, GroupProblem):
+
+    def __init__(self, group_name):
+        GroupProblem.__init__(group_name)
 
 class ConfigFilesIOError(TerminationError):
     
@@ -76,9 +89,15 @@ class ConfigFilesIOError(TerminationError):
     def error_number(self):
         return self.__error_number
     
-class ReadingConfigFilesError(ConfigFilesIOError): pass
+class ReadingConfigFilesError(ConfigFilesIOError):
+    
+    def __init__(self, filename, error_number):
+        super().__init__(filename, error_number)
 
-class WritingConfigFilesError(ConfigFilesIOError): pass
+class WritingConfigFilesError(ConfigFilesIOError):
+
+    def __init__(self, filename, error_number):
+        super().__init__(filename, error_number)
 
 class AttempToPerformSystemComposingError(TerminationError): pass
 
