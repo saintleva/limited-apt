@@ -201,6 +201,7 @@ def privileged_main():
                 else:
                     operation_tasks[operation_pair.command] = [operation_pair.package]
             runner.perform_operations(operation_tasks)
+        sys.exit(ExitCodes.GOOD.value)
     except GoodExit:
         sys.exit(ExitCodes.GOOD.value)
     except YouHaveNotUserPrivilegesError as err:

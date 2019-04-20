@@ -90,13 +90,13 @@ class CoownershipList:
         self.__data.clear()
         
     def export_to_xml(self, file):
-#         #TODO: remove it
-#         print("EXPORT:")
-#         for pkg, owners in sorted(self.__data.items(), key=lambda x: x[0]):
-#             print(pkg)
-#             for user in sorted(owners):
-#                 print("  " + user)
-#         print()
+        #TODO: remove it
+        print("EXPORT:")
+        for pkg, owners in sorted(self.__data.items(), key=lambda x: x[0]):
+            print(pkg)
+            for user in sorted(owners):
+                print("  " + user)
+        print()
         
         root = etree.Element("packages")
         for pkg, owners in sorted(self.__data.items(), key=lambda x: x[0]):

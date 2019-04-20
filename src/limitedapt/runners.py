@@ -70,7 +70,10 @@ class Modes:
         return self.__show_arch
     
     def pkg_str(self, pkg):
-        return pkg.fullname if self.show_arch else pkg.name
+        return pkg.shortname + ":" + pkg.candidate.architecture if self.show_arch else pkg.name
+    
+    #TOD: remove it        
+#        return pkg.fullname if self.show_arch else pkg.name
     
     
     #TODO: remove it
@@ -302,7 +305,7 @@ class Runner:
         # We don't need to sort packages because iterator of "Cache" class already returns
         # sorted sequence
         return (self.modes.pkg_str(pkg) for pkg in cache if pkg.candidate is not None and
-                VersionedPackage(pkg.name, pkg.architecture(), pkg.candidate.version) in enclosure)
+                VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version) in enclosure)
                     
     def __examine_and_apply_changes(self, cache, enclosure, is_upgrading=False):
         changes = cache.get_changes()
@@ -380,7 +383,6 @@ class Runner:
                     cache.commit(self.progresses.acquire, self.progresses.install)
                 else:
                     self.handlers.simulate()
-                raise GoodExit()
             except apt.cache.LockFailedException as err:
                 raise LockFailedError(err)
             except apt.cache.FetchCancelledException as err:
@@ -439,7 +441,7 @@ class Runner:
                             self.handlers.you_already_own_package(concrete_package)
                 else:
                     if versioned_package in enclosure or self.username == "root":
-                        coownership.add_ownership(concrete_package, self.username, also_root=True)
+                        coownership.add_ownership(concrete_package, self.username, also_root=False)
                         pkg.mark_install()
                     else:
                         self.handlers.may_not_install(pkg)
@@ -540,6 +542,5 @@ class Runner:
                 self.handlers.cannot_find_package(package_name)
         
         self.__examine_and_apply_changes(cache, enclosure)        
-        
         if not self.modes.simulate:
             self.__save_coownership_list(coownership)
