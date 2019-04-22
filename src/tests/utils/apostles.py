@@ -3,7 +3,7 @@
 
 import sys
 import os
-import crypt
+import cryptadd
 import subprocess
 from limitedapt.constants import *
 

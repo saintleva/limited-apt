@@ -44,9 +44,9 @@ def print_error(*args):
 
 def privileged_main():
     
-    if DEBUG:
-        debug_suidbit("privileged_main()")
-        print('PROGRAM ARGUMENTS: ', sys.argv)
+    # if DEBUG:
+    #     debug_suidbit("privileged_main()")
+    #     print('PROGRAM ARGUMENTS: ', sys.argv)
         
     
     #TODO: How must I to compute "user_id"?

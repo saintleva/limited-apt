@@ -22,7 +22,7 @@ import os.path
 import apt
 import apt_pkg
 import apt.progress.base
-from limitedapt import constants, coownership, debug
+from limitedapt import constants, debug
 from limitedapt.errors import *
 from limitedapt.packages import *
 from limitedapt.coownership import *
@@ -71,19 +71,7 @@ class Modes:
     
     def pkg_str(self, pkg):
         return pkg.shortname + ":" + pkg.candidate.architecture if self.show_arch else pkg.name
-    
-    #TOD: remove it        
-#        return pkg.fullname if self.show_arch else pkg.name
-    
-    
-    #TODO: remove it
-#     def package_str(self, cache, package):
-#         try:
-#             pkg = cache[str(package)]
-#         except KeyError:
-#             return str(package)
-#         return pkg.fullname if self.show_arch else pkg.name
-        
+
     @property
     def debug(self):
         return self.__debug
@@ -292,12 +280,26 @@ class Runner:
             raise ReadingConfigFilesError(filename, err.errno)
         
     def get_list_of_mine(self):
-        coownership_list = self.__load_coownership_list()               
-        return sorted(coownership_list.his_packages(self.username))
+        coownership_list = self.__load_coownership_list()
+        cache = apt.Cache()
+
+        def is_root_own_package(concrete_package):
+            owner_set = coownership_list.owners_of(concrete_package)
+
+            print(concrete_package)
+            print(owner_set)
+
+            return len(owner_set) == 0 or "root" in owner_set
+
+        if self.username == "root":
+            result = (pkg for pkg in cache if pkg.is_installed and not pkg.is_auto_installed and
+                      is_root_own_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture)))
+        else:
+            result = (cache[str(concrete_package)] for concrete_package in coownership_list.his_packages(self.username))
+        return sorted(result)
     
     def get_printed_list_of_mine(self):
-        cache = apt.Cache()
-        return (self.modes.pkg_str(cache[package]) for package in self.get_list_of_mine())        
+        return (self.modes.pkg_str(pkg) for pkg in self.get_list_of_mine())
             
     def get_printed_enclosure(self):
         cache = apt.Cache()
@@ -328,7 +330,7 @@ class Runner:
                     raise AttempToPerformSystemComposingError()                
                 
             for pkg in sorted(changes):
-                versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
+                versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
                 if pkg.marked_install and versioned_package not in enclosure:
                     self.handlers.may_not_install(pkg)
                     check_fatal()
@@ -416,8 +418,8 @@ class Runner:
             try:
                 pkg = cache[package_name]
                 #TODO: Is it correct?
-                versioned_package = VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version)
-                concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
+                versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
+                concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
                 if pkg.is_installed:
                     #can_upgrade = versioned_package in enclosure and pkg.is_upgradable
                     if pkg.is_upgradable:
@@ -454,7 +456,7 @@ class Runner:
             try:
                 pkg = cache[package_name]
                 try:
-                    concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
+                    concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
                     coownership.remove_ownership(concrete_package, self.username)
                     if not coownership.is_somebody_own(concrete_package):
                         pkg.mark_delete(purge=self.modes.purge_unused)
@@ -474,7 +476,7 @@ class Runner:
                     self.handlers.may_not_physically_remove(pkg.name)
                 else:
                     try:
-                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.architecture()))
+                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
                     except PackageIsNotInstalled:
                         self.handlers.physical_removation(pkg.name)
                     finally:
@@ -491,7 +493,7 @@ class Runner:
                     self.handlers.may_not_purge(pkg.name)
                 else:
                     try:
-                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.architecture()))
+                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
                     except PackageIsNotInstalled:
                         self.handlers.physical_removation(pkg.name)
                     finally:
@@ -528,7 +530,7 @@ class Runner:
                 pkg = cache[package_name]
                 if pkg.is_installed:
                     if pkg.is_auto_installed:
-                        if VersionedPackage(pkg.shortname, pkg.architecture(), pkg.candidate.version) in enclosure:
+                        if VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version) in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
                             # if installed package marked 'automatically installed' nobody owns it.
                             # Also we don't add "root" to this package owners for the same reason.

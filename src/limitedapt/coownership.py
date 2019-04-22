@@ -42,8 +42,12 @@ class CoownershipList:
         return iter(self.__data)
         
     def owners_of(self, pkg):
-        return self.__data.get(pkg, set())
-    
+        try:
+            return self.__data[pkg]
+        except KeyError:
+            return set()
+#        return self.__data.get(pkg, set())
+
     def is_somebody_own(self, pkg):
         return pkg in self.__data.keys()
     
