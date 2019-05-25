@@ -77,7 +77,7 @@ class CoownershipList:
             users = self.__data[pkg]
             try:
                 users.remove(user)
-                if users:
+                if not users: #TODO: Is it right?
                     del self.__data[pkg]
             except KeyError:
                 raise UserDoesNotOwnPackage("User '{0}' doesn't own package '{1}'".format(user, pkg))                

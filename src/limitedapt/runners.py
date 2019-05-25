@@ -285,11 +285,7 @@ class Runner:
 
         def is_root_own_package(concrete_package):
             owner_set = coownership_list.owners_of(concrete_package)
-
-            print(concrete_package)
-            print(owner_set)
-
-            return len(owner_set) == 0 or "root" in owner_set
+            return not owner_set or "root" in owner_set
 
         if self.username == "root":
             result = (pkg for pkg in cache if pkg.is_installed and not pkg.is_auto_installed and
@@ -312,9 +308,7 @@ class Runner:
     def __examine_and_apply_changes(self, cache, enclosure, is_upgrading=False):
         changes = cache.get_changes()
         self.applying_ui.show_changes(cache, is_upgrading)
-        if not changes:
-            raise GoodExit()
-              
+
         if self.username == "root":
             if self.modes.purge_unused:
                 for pkg in changes:
@@ -426,7 +420,7 @@ class Runner:
                         if versioned_package in enclosure or self.may_upgrade_package:
                             pkg.mark_upgrade()
                         else:
-                            self.handlers.may_not_upgrade(pkg.name)
+                            self.handlers.may_not_upgrade(pkg.name, pkg.candidate.version)
                     if pkg.is_auto_installed:
                         if versioned_package in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
@@ -463,12 +457,16 @@ class Runner:
                 except UserDoesNotOwnPackage:
                     self.handlers.may_not_remove(pkg.name)
                 except PackageIsNotInstalled:
-                    self.handlers.physical_removation(pkg.name)
+                    if username == "root":
+                        pkg.mark_delete(purge=self.modes.purge_unused)
+                    else:
+                        self.handlers.physical_removation(pkg.name)
+                        self.handlers.may_not_physically_remove(pkg.name)
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                             
         physically_remove_tasks = operation_tasks.get("physically-remove", [])
-        self.__debug_message("you want to physically remove" + list_to_str(physically_remove_tasks))
+        self.__debug_message("you want to physically remove: " + list_to_str(physically_remove_tasks))
         for package_name in physically_remove_tasks:
             try:
                 pkg = cache[package_name]
@@ -485,7 +483,7 @@ class Runner:
                 self.handlers.cannot_find_package(package_name)
 
         purge_tasks = operation_tasks.get("purge", [])
-        self.__debug_message("you want to purge" + list_to_str(purge_tasks))
+        self.__debug_message("you want to purge: " + list_to_str(purge_tasks))
         for package_name in purge_tasks:
             try:
                 pkg = cache[package_name]

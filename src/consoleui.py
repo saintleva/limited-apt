@@ -35,7 +35,7 @@ def get_terminal_width():
      
 class Applying(Modded):
     
-    def show_changes(self, cache, is_upgrading=False):
+    def show_changes(self, cache, logical_operations, is_upgrading=False):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
 
@@ -85,7 +85,8 @@ class Applying(Modded):
                                              'These packages will be removed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
                                              'These packages will be kept at they current version:')
-        
+
+        print('PHYSYCAL changes will be:')
         update_count = sum(1 for pkg in changes if pkg.marked_upgrade and not pkg.marked_install)
         #TODO: Calculate count of "have not been updated"        
         print('''{0} packages will be updated, {1} new will be installed, {2} marked for deletion, '''
@@ -122,7 +123,7 @@ class ErrorHandlers(Modded):
                   '''root may install it or throw down "auto-installed" mark from them'''.format(name))
         else:
             print('''Error: package "{0}" which you want to install is system-constitutive and nobody '''
-                  '''but root may install or it '''.format(name))
+                  '''but root may install it'''.format(name))
         
 #TODO: remove it:
 #    def may_not_upgrade_system_constitutive(self, pkg_name, version):
