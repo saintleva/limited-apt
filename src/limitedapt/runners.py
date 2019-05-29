@@ -420,7 +420,7 @@ class Runner:
                         if versioned_package in enclosure or self.may_upgrade_package:
                             pkg.mark_upgrade()
                         else:
-                            self.handlers.may_not_upgrade(pkg.name, pkg.candidate.version)
+                            self.handlers.may_not_upgrade_to_new(pkg, pkg.candidate.version)
                     if pkg.is_auto_installed:
                         if versioned_package in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
@@ -449,19 +449,21 @@ class Runner:
         for package_name in remove_tasks:
             try:
                 pkg = cache[package_name]
-                try:
-                    concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
-                    coownership.remove_ownership(concrete_package, self.username)
-                    if not coownership.is_somebody_own(concrete_package):
-                        pkg.mark_delete(purge=self.modes.purge_unused)
-                except UserDoesNotOwnPackage:
-                    self.handlers.may_not_remove(pkg.name)
-                except PackageIsNotInstalled:
-                    if username == "root":
-                        pkg.mark_delete(purge=self.modes.purge_unused)
-                    else:
-                        self.handlers.physical_removation(pkg.name)
-                        self.handlers.may_not_physically_remove(pkg.name)
+                if pkg.is_installed:
+                    try:
+                        concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+                        coownership.remove_ownership(concrete_package, self.username)
+                        if not coownership.is_somebody_own(concrete_package):
+                            pkg.mark_delete(purge=self.modes.purge_unused)
+                    except UserDoesNotOwnPackage:
+                        self.handlers.may_not_remove(pkg)
+                    except PackageIsNotInstalled:
+                        if username == "root":
+                            pkg.mark_delete(purge=self.modes.purge_unused)
+                        else:
+                            self.handlers.may_not_remove(pkg)
+                else:
+                    self.handlers.is_not_installed(pkg, "remove")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                             
@@ -470,15 +472,18 @@ class Runner:
         for package_name in physically_remove_tasks:
             try:
                 pkg = cache[package_name]
-                if self.username != "root":
-                    self.handlers.may_not_physically_remove(pkg.name)
+                if pkg.is_installed:
+                    if self.username != "root":
+                        self.handlers.may_not_physically_remove(pkg.name)
+                    else:
+                        try:
+                            coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
+                        except PackageIsNotInstalled:
+                            self.handlers.simple_removation(pkg.name)
+                        finally:
+                            pkg.mark_delete(purge=self.modes.purge_unused)
                 else:
-                    try:
-                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
-                    except PackageIsNotInstalled:
-                        self.handlers.physical_removation(pkg.name)
-                    finally:
-                        pkg.mark_delete(purge=self.modes.purge_unused)
+                    self.handlers.is_not_installed(pkg, "physically-remove")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
@@ -487,15 +492,18 @@ class Runner:
         for package_name in purge_tasks:
             try:
                 pkg = cache[package_name]
-                if self.username != "root":
-                    self.handlers.may_not_purge(pkg.name)
+                if pkg.is_installed:
+                    if self.username != "root":
+                        self.handlers.may_not_purge(pkg.name)
+                    else:
+                        try:
+                            coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
+                        except PackageIsNotInstalled:
+                            self.handlers.simple_removation(pkg.name)
+                        finally:
+                            pkg.mark_delete(purge=True)
                 else:
-                    try:
-                        coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
-                    except PackageIsNotInstalled:
-                        self.handlers.physical_removation(pkg.name)
-                    finally:
-                        pkg.mark_delete(purge=True)
+                    self.handlers.is_not_installed(pkg, "purge")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
@@ -514,9 +522,9 @@ class Runner:
                     except UserDoesNotOwnPackage:
                         self.handlers.may_not_markauto(pkg.name)
                     except PackageIsNotInstalled:
-                        self.handlers.physical_markauto(pkg.name)
+                        self.handlers.simpple_markauto(pkg.name)
                 else:
-                    self.handlers.is_not_installed(pkg.name, "markauto")
+                    self.handlers.is_not_installed(pkg, "markauto")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                 

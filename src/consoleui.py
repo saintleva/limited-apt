@@ -140,7 +140,7 @@ class ErrorHandlers(Modded):
               '''or users in "{1}" group may upgrade it'''.format(self.modes.pkg_str(pkg),
                                                                   UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME))
         
-    def is_not_installed(self, pkg_name, why_must_be):
+    def is_not_installed(self, pkg, why_must_be):
         action_dict = {"remove" : 'remove',
                        "physically-remove" : 'physically remove',
                        "purge" : 'remove with its configuration files',
@@ -148,7 +148,7 @@ class ErrorHandlers(Modded):
                        "markauto" : 'mark as automatically installed',
                        "unmarkauto" : 'mark as manually installed'}                        
         print('''Error: package "{0}" which you want to {1} is not installed'''.
-              format(self.modes.package_str(pkg_name), action_dict[why_must_be]))       
+              format(self.modes.package_str(pkg), action_dict[why_must_be]))
         
     def may_not_remove(self, pkg):
         print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
@@ -179,12 +179,12 @@ class ErrorHandlers(Modded):
     def package_is_not_trusted(self, pkg):
         print('''Error: package "{0}" is not trusted".'''.format(self.modes.pkg_str(pkg)))
         
-    def physical_removation(self, pkg_name):
+    def simple_removation(self, pkg_name):
         if self.modes.verbose:
             print('''No simple user has installed package "{0}" therefore physical removation '''
                   '''is equivalent to simple removation in that case'''.format(self.modes.package_str(pkg_name)))
             
-    def physical_markauto(self, pkg_name):
+    def simpple_markauto(self, pkg_name):
         if self.modes.verbose:
             print('''No simple user has marked package "{0}" automatically installed therefore physical "markauto" '''
                   '''is equivalent to simple 'markauto' in that case'''.format(self.modes.package_str(pkg_name)))
