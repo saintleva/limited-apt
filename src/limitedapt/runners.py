@@ -305,7 +305,7 @@ class Runner:
         return (self.modes.pkg_str(pkg) for pkg in cache if pkg.candidate is not None and
                 VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version) in enclosure)
                     
-    def __examine_and_apply_changes(self, cache, enclosure, is_upgrading=False):
+    def __examine_and_apply_changes(self, cache, enclosure, coownership, is_upgrading=False):
         changes = cache.get_changes()
         self.applying_ui.show_changes(cache, is_upgrading)
 
@@ -324,6 +324,7 @@ class Runner:
                     raise AttempToPerformSystemComposingError()                
                 
             for pkg in sorted(changes):
+                concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
                 versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
                 if pkg.marked_install and versioned_package not in enclosure:
                     self.handlers.may_not_install(pkg)
@@ -338,19 +339,13 @@ class Runner:
                     self.handlers.may_not_keep()
                     check_fatal()
                 if pkg.marked_delete:
-                    #TODO: Permit user to remove own packages 
+                    if not pkg.is_auto_removable and not concrete_package.is_sole_own(concrete_package, self.username):
+                        self.handlers.may_not_remove(pkg)
+                        check_fatal()
+                if pkg.is_inst_broken and not pkg.is_now_broken:
                     self.handlers.may_not_remove(pkg)
                     check_fatal()
 
-#                     if remove_all_possible:
-#                         
-#                     not in explicit_removes:
-#                     self.__print_error('''Error: you have not permissions to remove packages other than '''
-#                                        '''packages you has install later and want to explicitly remove''')
-#                     errors = True
-#                     if self.modes.fatal_errors:
-#                         break
-                    
                 #TODO: Also process "unmarkauto" !
                 addend = [pkg.name]
                     
@@ -415,7 +410,6 @@ class Runner:
                 versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
                 concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
                 if pkg.is_installed:
-                    #can_upgrade = versioned_package in enclosure and pkg.is_upgradable
                     if pkg.is_upgradable:
                         if versioned_package in enclosure or self.may_upgrade_package:
                             pkg.mark_upgrade()
@@ -466,7 +460,7 @@ class Runner:
                     self.handlers.is_not_installed(pkg, "remove")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
-                            
+
         physically_remove_tasks = operation_tasks.get("physically-remove", [])
         self.__debug_message("you want to physically remove: " + list_to_str(physically_remove_tasks))
         for package_name in physically_remove_tasks:
@@ -518,11 +512,11 @@ class Runner:
                         concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
                         coownership.remove_ownership(concrete_package, self.username)
                         if not coownership.is_somebody_own(concrete_package):
-                            pkg.mark_auto()
+                            pkg.mark_auto(auto=True)
                     except UserDoesNotOwnPackage:
                         self.handlers.may_not_markauto(pkg.name)
                     except PackageIsNotInstalled:
-                        self.handlers.simpple_markauto(pkg.name)
+                        self.handlers.simple_markauto(pkg.name)
                 else:
                     self.handlers.is_not_installed(pkg, "markauto")
             except KeyError:
@@ -543,7 +537,7 @@ class Runner:
                             coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
-                            self.handlers.may_not_install(pkg, True)
+                            self.handlers.may_not_markauto(pkg, True)
                 else:
                     self.handlers.is_not_installed(pkg.name, "unmarkauto")
             except KeyError:

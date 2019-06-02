@@ -35,7 +35,7 @@ def get_terminal_width():
      
 class Applying(Modded):
     
-    def show_changes(self, cache, logical_operations, is_upgrading=False):
+    def show_changes(self, cache, is_upgrading=False):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
 
@@ -143,29 +143,28 @@ class ErrorHandlers(Modded):
     def is_not_installed(self, pkg, why_must_be):
         action_dict = {"remove" : 'remove',
                        "physically-remove" : 'physically remove',
-                       "purge" : 'remove with its configuration files',
-                       "physically-purge" : 'physically remove with its configuration files',
+                       "purge" : 'physically remove with its configuration files',
                        "markauto" : 'mark as automatically installed',
                        "unmarkauto" : 'mark as manually installed'}                        
         print('''Error: package "{0}" which you want to {1} is not installed'''.
-              format(self.modes.package_str(pkg), action_dict[why_must_be]))
+              format(self.modes.pkg_str(pkg), action_dict[why_must_be]))
         
     def may_not_remove(self, pkg):
         print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
               '''you have installed later and want to explicitly remove'''.format(self.modes.pkg_str(pkg)))
         
-    def may_not_physically_remove(self, pkg_name):
+    def may_not_physically_remove(self, pkg):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.
-              format(self.modes.package_str(pkg_name)))
+              format(self.modes.pkg_str(pkg)))
         
-    def may_not_purge(self, pkg_name):
+    def may_not_purge(self, pkg):
         print('''Error: you may not purge package "{0}" because only root may do that'''.
-              format(self.modes.package_str(pkg_name)))
+              format(self.modes.pkg_str(pkg)))
         
-    def may_not_markauto(self, pkg_name):
+    def may_not_markauto(self, pkg):
         print('''Error: you may not mark package "{0}" as automatically installed because you have not permissions '''
               '''to "markauto" packages other than packages you have marked manually installed later'''.
-              format(self.modes.package_str(pkg_name)))
+              format(self.modes.pkg_str(pkg)))
         
     def may_not_downgrade(self):
         print('''Error: you have not permissions to downgrade packages''')
@@ -173,21 +172,25 @@ class ErrorHandlers(Modded):
     def may_not_keep(self):
         print('''Error: you have not permissions to keep packages at their current versions''')
         
+    def may_not_break(self, pkg):
+        print('''Error: your actions make package "{0}" broken'''.
+              format(self.modes.pkg_str(pkg)))
+
     def may_not_install_from_this_archive(self, archive):
         print('''Error: you have not permissions to install packages from "{0}" archive (suite)'''.format(archive))
 
     def package_is_not_trusted(self, pkg):
         print('''Error: package "{0}" is not trusted".'''.format(self.modes.pkg_str(pkg)))
         
-    def simple_removation(self, pkg_name):
+    def simple_removation(self, pkg):
         if self.modes.verbose:
             print('''No simple user has installed package "{0}" therefore physical removation '''
-                  '''is equivalent to simple removation in that case'''.format(self.modes.package_str(pkg_name)))
+                  '''is equivalent to simple removation in that case'''.format(self.modes.pkg_str(pkg)))
             
-    def simpple_markauto(self, pkg_name):
+    def simple_markauto(self, pkg):
         if self.modes.verbose:
             print('''No simple user has marked package "{0}" automatically installed therefore physical "markauto" '''
-                  '''is equivalent to simple 'markauto' in that case'''.format(self.modes.package_str(pkg_name)))
+                  '''is equivalent to simple 'markauto' in that case'''.format(self.modes.pkg_str(pkg)))
             
     def simulate(self):
         head = '...SIMULATING'
