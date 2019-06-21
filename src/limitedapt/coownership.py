@@ -41,54 +41,54 @@ class CoownershipList:
     def __iter__(self):
         return iter(self.__data)
         
-    def owners_of(self, pkg):
+    def owners_of(self, package):
         try:
-            return self.__data[pkg]
+            return self.__data[package]
         except KeyError:
             return set()
-#        return self.__data.get(pkg, set())
+#        return self.__data.get(package, set())
 
-    def is_somebody_own(self, pkg):
-        return pkg in self.__data.keys()
+    def is_somebody_own(self, package):
+        return package in self.__data.keys()
     
     def his_packages(self, user):
-        return (pkg for pkg, owners in self.__data.items() if user in owners)
+        return (package for package, owners in self.__data.items() if user in owners)
     
-    def is_own(self, pkg, user):
-        return user in self.__data[pkg] if pkg in self.__data else False
+    def is_own(self, package, user):
+        return user in self.__data[package] if package in self.__data else False
     
-    def is_sole_own(self, pkg, user):
-        return { user } == self.__data[pkg] if pkg in self.__data else False
+    def is_sole_own(self, package, user):
+        return { user } == self.__data[package] if package in self.__data else False
     
-    def add_ownership(self, pkg, user, also_root=False):
+    def add_ownership(self, package, user, also_root=False):
         #TODO: Is it logics good? 
-        if pkg in self.__data:
-            if user in self.__data[pkg]:
-                raise UserAlreadyOwnsThisPackage("User '{0} has already own package '{1}".format(user, pkg))
+        if package in self.__data:
+            if user in self.__data[package]:
+                raise UserAlreadyOwnsThisPackage("User '{0} has already own package '{1}".format(user, package))
             else:
-                self.__data[pkg].add(user)
+                self.__data[package].add(user)
         else:
-            self.__data[pkg] = { user }
+            self.__data[package] = { user }
         if also_root and user != "root":
-            self.__data[pkg].add("root")
+            self.__data[package].add("root")
             
-    def remove_ownership(self, pkg, user):
+    def remove_ownership(self, package, user):
         try:
-            users = self.__data[pkg]
+            users = self.__data[package]
             try:
                 users.remove(user)
                 if not users:
-                    del self.__data[pkg]
+                    del self.__data[package]
             except KeyError:
-                raise UserDoesNotOwnPackage("User '{0}' doesn't own package '{1}'".format(user, pkg))                
+                raise UserDoesNotOwnPackage("User '{0}' doesn't own package '{1}'".format(user, package))                
         except KeyError:
-            raise PackageIsNotInstalled("Package '{0}' is not installed".format(pkg))
+            raise PackageIsNotInstalled("Package '{0}' is not installed".format(package))
         
-    def remove_package(self, pkg):
+    def remove_package(self, package):
         try:
-            del self.__data[pkg]                
+            del self.__data[package]                
         except KeyError:
-            raise PackageIsNotInstalled("Package '{0}' is not installed".format(pkg))        
+            raise PackageIsNotInstalled("Package '{0}' is not installed".format(package))        
         
     def clear(self):
         self.__data.clear()
@@ -96,15 +96,15 @@ class CoownershipList:
     def export_to_xml(self, file):
         #TODO: remove it
         print("EXPORT:")
-        for pkg, owners in sorted(self.__data.items(), key=lambda x: x[0]):
-            print(pkg)
+        for package, owners in sorted(self.__data.items(), key=lambda x: x[0]):
+            print(package)
             for user in sorted(owners):
                 print("  " + user)
         print()
         
         root = etree.Element("packages")
-        for pkg, owners in sorted(self.__data.items(), key=lambda x: x[0]):
-            package_element = etree.SubElement(root, "package", name=pkg.name, arch=pkg.architecture)
+        for package, owners in sorted(self.__data.items(), key=lambda x: x[0]):
+            package_element = etree.SubElement(root, "package", name=package.name, arch=package.architecture)
             for user in sorted(owners):
                 etree.SubElement(package_element, "user", name=user)
         tree = etree.ElementTree(root)        
@@ -116,11 +116,11 @@ class CoownershipList:
             self.clear()
             for package_element in root.findall("package"):
                 try:                    
-                    pkg = ConcretePackage(package_element.get("name"), package_element.get("arch"))
+                    package = ConcretePackage(package_element.get("name"), package_element.get("arch"))
                     owners = set()
                     for user_element in package_element.findall("user"):
                         owners.add(user_element.get("name"))                        
-                    self.__data[pkg] = owners
+                    self.__data[package] = owners
                 except (ValueError, LookupError) as err:
                     raise CoownershipImportSyntaxError("Syntax error has been appeared during importing "
                                                        "coownership table from xml: " + str(err))

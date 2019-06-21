@@ -101,6 +101,10 @@ class WritingConfigFilesError(ConfigFilesIOError):
 
 class AttempToPerformSystemComposingError(TerminationError): pass
 
+class WantToDoSystemComposingError(AttempToPerformSystemComposingError): pass
+
+class SystemComposingByResolverError(AttempToPerformSystemComposingError): pass
+
 class AptProcessingError(TerminationError): pass
 
 class LockFailedError(AptProcessingError): pass

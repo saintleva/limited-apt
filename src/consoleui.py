@@ -109,6 +109,16 @@ class Applying(Modded):
 
 
 class ErrorHandlers(Modded):
+
+    def __init__(self):
+        self.__byresolver = False
+
+    @property
+    def byresolver(self):
+        return self.__byresolver
+
+    def resolving_done(self):
+        self.__byresolver = True
     
     def cannot_find_package(self, pkg_name):
         print('''Cannot find package "{0}"'''.format(pkg_name))
@@ -122,23 +132,13 @@ class ErrorHandlers(Modded):
             print('''Error: package "{0}" which you want to install is system-constitutive and nobody but '''
                   '''root may install it or throw down "auto-installed" mark from them'''.format(name))
         else:
-            print('''Error: package "{0}" which you want to install is system-constitutive and nobody '''
-                  '''but root may install it'''.format(name))
-        
-#TODO: remove it:
-#    def may_not_upgrade_system_constitutive(self, pkg_name, version):
-#        print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
-#              '''this new version is system-constitutive.'''.format(pkg_name, version))
+            purpose = 'need to install in order to resolve dependencies' if self.byresolver else 'want to install'
+            print('''Error: package "{0}" which you {1} is system-constitutive and nobody '''
+                  '''but root may install it'''.format(name, purpose))
         
     def may_not_upgrade_to_new(self, pkg, version):
         print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
               '''this new version is system-constitutive'''.format(self.modes.pkg_str(pkg), version))
-        
-    #TODO: when use this mehton?
-    def may_not_upgrade_system(self, pkg):
-        print('''Error: package "{0}" which you want to upgrade is system and nothing but root '''
-              '''or users in "{1}" group may upgrade it'''.format(self.modes.pkg_str(pkg),
-                                                                  UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME))
         
     def is_not_installed(self, pkg, why_must_be):
         action_dict = {"remove" : 'remove',
@@ -173,8 +173,7 @@ class ErrorHandlers(Modded):
         print('''Error: you have not permissions to keep packages at their current versions''')
         
     def may_not_break(self, pkg):
-        print('''Error: your actions make package "{0}" broken'''.
-              format(self.modes.pkg_str(pkg)))
+        print('''Error: your actions make package "{0}" broken'''.format(self.modes.pkg_str(pkg)))
 
     def may_not_install_from_this_archive(self, archive):
         print('''Error: you have not permissions to install packages from "{0}" archive (suite)'''.format(archive))
@@ -186,12 +185,12 @@ class ErrorHandlers(Modded):
         if self.modes.verbose:
             print('''No simple user has installed package "{0}" therefore physical removation '''
                   '''is equivalent to simple removation in that case'''.format(self.modes.pkg_str(pkg)))
-            
-    def simple_markauto(self, pkg):
-        if self.modes.verbose:
-            print('''No simple user has marked package "{0}" automatically installed therefore physical "markauto" '''
-                  '''is equivalent to simple 'markauto' in that case'''.format(self.modes.pkg_str(pkg)))
-            
+#TODO: remove it
+#    def simple_markauto(self, pkg):
+#        if self.modes.verbose:
+#            print('''No simple user has marked package "{0}" automatically installed therefore physical "markauto" '''
+#                  '''is equivalent to simple 'markauto' in that case'''.format(self.modes.pkg_str(pkg)))
+
     def simulate(self):
         head = '...SIMULATING'
         point_count = get_terminal_width() - len(head) 

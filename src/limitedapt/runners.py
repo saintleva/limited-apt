@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Lesser General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
-from limitedapt.packages import VersionedPackage
 '''Logics of limited-apt'''
 
 import pwd
@@ -31,25 +30,16 @@ from limitedapt.enclosure import *
 
 DEBUG = True
 
-class OperationPair:
-    
-    def __init__(self, command, package):
-        self.__command = command
-        self.__package = package
-        #TODO: Do I need this checking?
-#         if len(package) == 0:
-#             raise InvalidOperation('Error: invalid operation: package name is empty')
-#         else:
-#             self._package = package
-            
-    @property
-    def command(self):
-        return self.__command
 
-    @property
-    def package(self):
-        return self.__package
-        
+class Tasks:
+
+    def __init__(self):
+        self.install = []
+        self.remove = []
+        self.physically_remove = []
+        self.purge = []
+        self.markauto = []
+        self.unmarkauto = []
         
 class Modes:
     '''limited-apt application modes (options) incapsulation'''
@@ -309,6 +299,8 @@ class Runner:
         changes = cache.get_changes()
         self.applying_ui.show_changes(cache, is_upgrading)
 
+        self.handlers.resolving_done()
+
         if self.username == "root":
             if self.modes.purge_unused:
                 for pkg in changes:
@@ -321,14 +313,17 @@ class Runner:
                 nonlocal errors
                 errors = True
                 if self.modes.fatal_errors:
-                    raise AttempToPerformSystemComposingError()                
+                    raise SystemComposingByResolverError()
                 
             for pkg in sorted(changes):
                 concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
                 versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
-                if pkg.marked_install and versioned_package not in enclosure:
-                    self.handlers.may_not_install(pkg)
-                    check_fatal()
+                if pkg.marked_install:
+                    if versioned_package not in enclosure:
+                        self.handlers.may_not_install(pkg)
+                        check_fatal()
+                    else:
+                        implicitly = implicitly or pkg.name not in cache tasks.install
                 if pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
                     self.handlers.may_not_upgrade_to_new(pkg, pkg.candidate.version)
                     check_fatal()
@@ -343,7 +338,7 @@ class Runner:
                         self.handlers.may_not_remove(pkg)
                         check_fatal()
                 if pkg.is_inst_broken and not pkg.is_now_broken:
-                    self.handlers.may_not_remove(pkg)
+                    self.handlers.may_not_break(pkg)
                     check_fatal()
 
                 #TODO: Also process "unmarkauto" !
@@ -365,7 +360,7 @@ class Runner:
                         self.handlers.package_is_not_trusted(pkg)
                         check_fatal()
             if errors:
-                raise AttempToPerformSystemComposingError()
+                raise SystemComposingByResolverError()
                      
 #        agree = self.applying_ui.prompt_agree() if self.modes.prompt else True
         if self.applying_ui.prompt_agree():
@@ -391,7 +386,7 @@ class Runner:
         cache.upgrade(full_upgrade)
         self.__examine_and_apply_changes(cache, enclosure, is_upgrading=True)        
               
-    def perform_operations(self, operation_tasks):
+    def perform_operations(self, tasks):
         if not self.has_privileges:
             raise YouMayNotPerformError(constants.UNIX_LIMITEDAPT_GROUPNAME)
 
@@ -399,11 +394,18 @@ class Runner:
         
         coownership = self.__load_coownership_list()
         enclosure = self.__load_enclosure()
-        
-        installation_tasks = operation_tasks.get("install", [])
+
+        errors = False
+
+        def check_fatal():
+            nonlocal errors
+            errors = True
+            if self.modes.fatal_errors:
+                raise WantToDoSystemComposingError()
+
         #TODO: Implement good formatting of this message
-        self.__debug_message("You want to install: " + list_to_str(installation_tasks))
-        for package_name in installation_tasks:
+        self.__debug_message("You want to install: " + list_to_str(tasks.install))
+        for package_name in tasks.install:
             try:
                 pkg = cache[package_name]
                 #TODO: Is it correct?
@@ -415,6 +417,7 @@ class Runner:
                             pkg.mark_upgrade()
                         else:
                             self.handlers.may_not_upgrade_to_new(pkg, pkg.candidate.version)
+                            check_fatal()
                     if pkg.is_auto_installed:
                         if versioned_package in enclosure:
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
@@ -424,6 +427,7 @@ class Runner:
                             pkg.mark_auto(auto=False)
                         else:
                             self.handlers.may_not_install(pkg, is_auto_installed_yet=True)
+                            check_fatal()
                     else:
                         try:
                             coownership.add_ownership(concrete_package, self.username, also_root=True)                            
@@ -435,12 +439,12 @@ class Runner:
                         pkg.mark_install()
                     else:
                         self.handlers.may_not_install(pkg)
+                        check_fatal()
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                 
-        remove_tasks = operation_tasks.get("remove", [])
-        self.__debug_message("you want to remove: " + list_to_str(remove_tasks))
-        for package_name in remove_tasks:
+        self.__debug_message("you want to remove: " + list_to_str(tasks.remove))
+        for package_name in tasks.remove:
             try:
                 pkg = cache[package_name]
                 if pkg.is_installed:
@@ -451,24 +455,26 @@ class Runner:
                             pkg.mark_delete(purge=self.modes.purge_unused)
                     except UserDoesNotOwnPackage:
                         self.handlers.may_not_remove(pkg)
+                        check_fatal()
                     except PackageIsNotInstalled:
                         if username == "root":
                             pkg.mark_delete(purge=self.modes.purge_unused)
                         else:
                             self.handlers.may_not_remove(pkg)
+                            check_fatal()
                 else:
                     self.handlers.is_not_installed(pkg, "remove")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
-        physically_remove_tasks = operation_tasks.get("physically-remove", [])
-        self.__debug_message("you want to physically remove: " + list_to_str(physically_remove_tasks))
-        for package_name in physically_remove_tasks:
+        self.__debug_message("you want to physically remove: " + list_to_str(tasks.physically_remove))
+        for package_name in tasks.physically_remove:
             try:
                 pkg = cache[package_name]
                 if pkg.is_installed:
                     if self.username != "root":
                         self.handlers.may_not_physically_remove(pkg.name)
+                        check_fatal()
                     else:
                         try:
                             coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
@@ -481,14 +487,14 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
-        purge_tasks = operation_tasks.get("purge", [])
-        self.__debug_message("you want to purge: " + list_to_str(purge_tasks))
-        for package_name in purge_tasks:
+        self.__debug_message("you want to purge: " + list_to_str(tasks.purge))
+        for package_name in tasks.purge:
             try:
                 pkg = cache[package_name]
                 if pkg.is_installed:
                     if self.username != "root":
                         self.handlers.may_not_purge(pkg.name)
+                        check_fatal()
                     else:
                         try:
                             coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
@@ -501,10 +507,9 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
-        markauto_tasks = operation_tasks.get("markauto", [])
         #TODO: Implement good formatting of this message
-        self.__debug_message("you want to markauto: " + list_to_str(markauto_tasks))
-        for package_name in markauto_tasks:
+        self.__debug_message("you want to markauto: " + list_to_str(tasks.markauto))
+        for package_name in tasks.markauto:
             try:
                 pkg = cache[package_name]
                 if pkg.is_installed:
@@ -515,17 +520,15 @@ class Runner:
                             pkg.mark_auto(auto=True)
                     except UserDoesNotOwnPackage:
                         self.handlers.may_not_markauto(pkg.name)
-                    except PackageIsNotInstalled:
-                        self.handlers.simple_markauto(pkg.name)
+                        check_fatal()
                 else:
                     self.handlers.is_not_installed(pkg, "markauto")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                 
-        unmarkauto_tasks = operation_tasks.get("unmarkauto", [])
         #TODO: Implement good formatting of this message
-        self.__debug_message("you want to unmarkauto: " + list_to_str(unmarkauto_tasks))
-        for package_name in unmarkauto_tasks:
+        self.__debug_message("you want to unmarkauto: " + list_to_str(tasks.unmarkauto))
+        for package_name in tasks.unmarkauto:
             try:
                 pkg = cache[package_name]
                 if pkg.is_installed:
@@ -538,11 +541,15 @@ class Runner:
                             pkg.mark_auto(auto=False)
                         else:
                             self.handlers.may_not_markauto(pkg, True)
+                            check_fatal()
                 else:
                     self.handlers.is_not_installed(pkg.name, "unmarkauto")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
-        
-        self.__examine_and_apply_changes(cache, enclosure)        
+
+        if errors:
+            raise SystemComposingByResolverError()
+
+        self.__examine_and_apply_changes(cache, enclosure)
         if not self.modes.simulate:
             self.__save_coownership_list(coownership)

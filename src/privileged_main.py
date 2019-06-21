@@ -116,19 +116,19 @@ def privileged_main():
                                   'markauto' : 'Mark packages as having been automatically installed.',
                                   'unmarkauto' : 'Mark packages as having been manually installed by you.'}
     
-    def unsuffix_operation(operation):
+    def add_unsuffixed_operation_to_tasks(operation, tasks):
         if operation.endswith('+'):
-            return OperationPair('install', operation[:-1])
+            tasks.install.append(operation[:-1])
         elif operation.endswith('-'):
-            return OperationPair('remove', operation[:-1])
+            tasks.remove.append(operation[:-1])
         elif operation.endswith('^'):
-            return OperationPair('physically-remove', operation[:-1])
+            tasks.physically_remove.append(operation[:-1])
         elif operation.endswith('_'):
-            return OperationPair('purge', operation[:-1])
+            tasks.purge.append(operation[:-1])
         elif operation.endswith('&M'):
-            return OperationPair('markauto', operation[:-2])
+            tasks.markauto.append(operation[:-2])
         elif operation.endswith('&m'):
-            return OperationPair('unmarkauto', operation[:-2])
+            tasks.unmarkauto.append(operation[:-2])
         else:
             print_error('''Error: invalid operation on the suffix''')              
             sys.exit(ExitCodes.INVALID_OPERATION_ON_THE_SUFFIX.value)
@@ -190,17 +190,25 @@ def privileged_main():
             for name in runner.get_printed_list_of_mine():
                 print(name)
         elif args.subcommand in operation_subcommands_dict.keys():
-            operation_tasks = { args.subcommand : args.packages }
-            runner.perform_operations(operation_tasks)
+            tasks = Tasks()
+            if args.subcommand == 'install':
+                tasks.install = args.packages
+            elif args.subcommand == 'remove':
+                tasks.remove = args.packages
+            elif args.subcommand == 'physically-remove':
+                tasks.physically_remove = args.packages
+            elif args.subcommand == 'purge':
+                tasks.purge = args.packages
+            elif args.subcommand == 'markauto':
+                tasks.markauto = args.packages
+            if args.subcommand == 'unmarkauto':
+                tasks.unmarkauto = args.packages
+            runner.perform_operations(tasks)
         elif args.subcommand == 'diverse':
-            operation_tasks = {}
+            tasks = Tasks()
             for operation in args.package_operations:
-                operation_pair = unsuffix_operation(operation)
-                if operation_pair.command in operation_tasks:
-                    operation_tasks[operation_pair.command].append(operation_pair.package)
-                else:
-                    operation_tasks[operation_pair.command] = [operation_pair.package]
-            runner.perform_operations(operation_tasks)
+                add_unsuffixed_operation_to_tasks(operation, tasks)
+            runner.perform_operations(tasks)
         sys.exit(ExitCodes.GOOD.value)
     except GoodExit:
         sys.exit(ExitCodes.GOOD.value)
@@ -214,8 +222,10 @@ def privileged_main():
         print_error('''Error: you have not privileges to {0}: you must be root or a member of "{1}" group'''.
                     format(action_str, err.group_name))
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
-    except AttempToPerformSystemComposingError:
-        sys.exit(ExitCodes.ATTEMPT_TO_PERFORM_SYSTEM_COMPOSING.value)
+    except WantToDoSystemComposingError:
+        sys.exit(ExitCodes.WANT_TO_DO_SYSTEM_COMPOSING.value)
+    except SystemComposingByResolverError:
+        sys.exit(ExitCodes.SYSTEM_COMPOSING_BY_RESOLVER.value)
     except YouMayNotPurgeError:
         print_error('''Error: only root can purge packages and use "--purge-unused" option''')              
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
