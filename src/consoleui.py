@@ -35,7 +35,7 @@ def get_terminal_width():
      
 class Applying(Modded):
     
-    def show_changes(self, cache, is_upgrading=False):
+    def show_changes(self, cache, tasks, is_upgrading=False):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
 
@@ -53,7 +53,7 @@ class Applying(Modded):
             terminal_width = get_terminal_width()
             
             package_list = sorted((pkg for pkg in changes if pkg_predicate(pkg)), key=lambda pkg: pkg.name)
-            if len(package_list) > 0:
+            if package_list:
                 print(header)
                 line = '  '
                 for pkg in package_list:
@@ -72,25 +72,34 @@ class Applying(Modded):
                             line = future_line
                 if line != '  ':
                     print(line)
-            
+
+        print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.is_installed,
+                                             'These new packages will be logically installed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_install,
-                                             'These new packages will be installed:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_upgrade and not pkg.marked_install,
-                                             'These packages will be upgraded:')
+                                             'These new packages will be physically installed:')
+        print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.marked_upgrade,
+                                             'These packages will be logically installed but physically upgrade:')
+        print_onetype_operation_package_list(lambda pkg: pkg not in tasks.install and pkg.marked_upgrade,
+                                             'These packages will be upgrade:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_reinstall,
                                              'These packages will be reinstalled:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_downgrade,
                                              'These packages will be downgraded:')
+        print_onetype_operation_package_list(lambda pkg: pkg in tasks.remove and not pkg.marked_delete,
+                                             'These packages will be logically removed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_delete,
-                                             'These packages will be removed:')
+                                             'These packages will be physically removed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
                                              'These packages will be kept at they current version:')
 
-        print('PHYSYCAL changes will be:')
-        update_count = sum(1 for pkg in changes if pkg.marked_upgrade and not pkg.marked_install)
-        #TODO: Calculate count of "have not been updated"        
-        print('''{0} packages will be updated, {1} new will be installed, {2} marked for deletion, '''
-              .format(update_count, cache.install_count, cache.delete_count))
+        update_count = sum(1 for pkg in changes if pkg.marked_upgrade)
+        logically_installed_count = sum(1 for pkg in changes if pkg in tasks.install and pkg.is_installed)
+        logically_remove_count = sum(1 for pkg in changes if pkg in tasks.remove and not pkg.marked_delete)
+
+        #TODO: Calculate count of "have not been updated"
+        print('''{0} packages will be updated, {1} new will be logically installed, {2} new will be physically installed, 
+        {3} marked for logical deletion, {3} marked for physically deletion.'''
+              .format(update_count, logically_installed_count, cache.install_count, logically_remove_count, cache.delete_count))
         print('''Required to download {0} archives. '''.format(pretty_size_str(cache.required_download)), end='')
         if cache.required_space >= 0:
             print('''{0} will be occupied after unpacking.'''.format(pretty_size_str(cache.required_space)))

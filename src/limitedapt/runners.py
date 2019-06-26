@@ -40,7 +40,55 @@ class Tasks:
         self.purge = []
         self.markauto = []
         self.unmarkauto = []
-        
+
+
+class OnetypeConcretePkgTasks:
+
+    def __init__(self, cache, onetype_tasks):
+        self.__container = set()
+        for task in onetype_tasks:
+            pkg = cache[task]
+            self.__container.add(ConcretePackage(pkg.name, pkg.architecture))
+
+    def __contains__(self, pkg):
+        return ConcretePackage(pkg.name, pkg.architecture) in self.__container
+
+
+class ConcretePkgTasks:
+
+    def __init__(self, cache, tasks):
+        self.__install = OnetypeConcretePkgTasks(cache, tasks.install)
+        self.__remove = OnetypeConcretePkgTasks(cache, tasks.remove)
+        self.__physically_remove = OnetypeConcretePkgTasks(cache, tasks.physically_remove)
+        self.__purge = OnetypeConcretePkgTasks(cache, tasks.purge)
+        self.__markauto = OnetypeConcretePkgTasks(cache, tasks.markauto)
+        self.__unmarkauto = OnetypeConcretePkgTasks(cache, tasks.unmarkauto)
+
+    @property
+    def install(self):
+        return self.__install
+
+    @property
+    def remove(self):
+        return self.__remove
+
+    @property
+    def physically_remove(self):
+        return self.__physically_remove
+
+    @property
+    def purge(self):
+        return self.__purge
+
+    @property
+    def markauto(self):
+        return self.__unmarkauto
+
+    @property
+    def unmarkauto(self):
+        return self.__unmarkauto
+
+
 class Modes:
     '''limited-apt application modes (options) incapsulation'''
     
@@ -92,7 +140,8 @@ class Modes:
     @property
     def fatal_errors(self):
         return self.__fatal_errors
-  
+
+
 class Modded:
     
     @property
@@ -295,9 +344,9 @@ class Runner:
         return (self.modes.pkg_str(pkg) for pkg in cache if pkg.candidate is not None and
                 VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version) in enclosure)
                     
-    def __examine_and_apply_changes(self, cache, enclosure, coownership, is_upgrading=False):
+    def __examine_and_apply_changes(self, cache, tasks, enclosure, coownership, is_upgrading=False):
         changes = cache.get_changes()
-        self.applying_ui.show_changes(cache, is_upgrading)
+        self.applying_ui.show_changes(cache, ConcretePkgTasks(tasks), is_upgrading)
 
         self.handlers.resolving_done()
 
@@ -384,7 +433,7 @@ class Runner:
         cache = apt.Cache()
         enclosure = self.__load_enclosure()
         cache.upgrade(full_upgrade)
-        self.__examine_and_apply_changes(cache, enclosure, is_upgrading=True)        
+        self.__examine_and_apply_changes(cache, Tasks(), enclosure, is_upgrading=True)
               
     def perform_operations(self, tasks):
         if not self.has_privileges:
@@ -395,6 +444,14 @@ class Runner:
         coownership = self.__load_coownership_list()
         enclosure = self.__load_enclosure()
 
+        #TODO: Implement good formatting of these messages:
+        self.__debug_message("You want to install: " + list_to_str(tasks.install))
+        self.__debug_message("you want to remove: " + list_to_str(tasks.remove))
+        self.__debug_message("you want to physically remove: " + list_to_str(tasks.physically_remove))
+        self.__debug_message("you want to purge: " + list_to_str(tasks.purge))
+        self.__debug_message("you want to markauto: " + list_to_str(tasks.markauto))
+        self.__debug_message("you want to unmarkauto: " + list_to_str(tasks.unmarkauto))
+
         errors = False
 
         def check_fatal():
@@ -403,8 +460,6 @@ class Runner:
             if self.modes.fatal_errors:
                 raise WantToDoSystemComposingError()
 
-        #TODO: Implement good formatting of this message
-        self.__debug_message("You want to install: " + list_to_str(tasks.install))
         for package_name in tasks.install:
             try:
                 pkg = cache[package_name]
@@ -443,7 +498,6 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                 
-        self.__debug_message("you want to remove: " + list_to_str(tasks.remove))
         for package_name in tasks.remove:
             try:
                 pkg = cache[package_name]
@@ -467,7 +521,6 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
-        self.__debug_message("you want to physically remove: " + list_to_str(tasks.physically_remove))
         for package_name in tasks.physically_remove:
             try:
                 pkg = cache[package_name]
@@ -487,7 +540,6 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
-        self.__debug_message("you want to purge: " + list_to_str(tasks.purge))
         for package_name in tasks.purge:
             try:
                 pkg = cache[package_name]
@@ -507,8 +559,6 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
-        #TODO: Implement good formatting of this message
-        self.__debug_message("you want to markauto: " + list_to_str(tasks.markauto))
         for package_name in tasks.markauto:
             try:
                 pkg = cache[package_name]
@@ -526,8 +576,6 @@ class Runner:
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
                 
-        #TODO: Implement good formatting of this message
-        self.__debug_message("you want to unmarkauto: " + list_to_str(tasks.unmarkauto))
         for package_name in tasks.unmarkauto:
             try:
                 pkg = cache[package_name]
@@ -550,6 +598,6 @@ class Runner:
         if errors:
             raise SystemComposingByResolverError()
 
-        self.__examine_and_apply_changes(cache, enclosure)
+        self.__examine_and_apply_changes(cache, tasks, enclosure)
         if not self.modes.simulate:
             self.__save_coownership_list(coownership)
