@@ -26,81 +26,24 @@ from limitedapt.errors import *
 from limitedapt.packages import *
 from limitedapt.coownership import *
 from limitedapt.enclosure import *
+from limitedapt.tasks import *
 
 
 DEBUG = True
-
-
-class Tasks:
-
-    def __init__(self):
-        self.install = []
-        self.remove = []
-        self.physically_remove = []
-        self.purge = []
-        self.markauto = []
-        self.unmarkauto = []
-
-
-class OnetypeConcretePkgTasks:
-
-    def __init__(self, cache, onetype_tasks):
-        self.__container = set()
-        for task in onetype_tasks:
-            pkg = cache[task]
-            self.__container.add(ConcretePackage(pkg.name, pkg.architecture))
-
-    def __contains__(self, pkg):
-        return ConcretePackage(pkg.name, pkg.architecture) in self.__container
-
-
-class ConcretePkgTasks:
-
-    def __init__(self, cache, tasks):
-        self.__install = OnetypeConcretePkgTasks(cache, tasks.install)
-        self.__remove = OnetypeConcretePkgTasks(cache, tasks.remove)
-        self.__physically_remove = OnetypeConcretePkgTasks(cache, tasks.physically_remove)
-        self.__purge = OnetypeConcretePkgTasks(cache, tasks.purge)
-        self.__markauto = OnetypeConcretePkgTasks(cache, tasks.markauto)
-        self.__unmarkauto = OnetypeConcretePkgTasks(cache, tasks.unmarkauto)
-
-    @property
-    def install(self):
-        return self.__install
-
-    @property
-    def remove(self):
-        return self.__remove
-
-    @property
-    def physically_remove(self):
-        return self.__physically_remove
-
-    @property
-    def purge(self):
-        return self.__purge
-
-    @property
-    def markauto(self):
-        return self.__unmarkauto
-
-    @property
-    def unmarkauto(self):
-        return self.__unmarkauto
 
 
 class Modes:
     '''limited-apt application modes (options) incapsulation'''
     
     def __init__(self, show_arch, debug, verbose, purge_unused, physically_remove,
-                 simulate=False, prompt=False, fatal_errors=False):
+                 simulate=False, assume_yes=False, fatal_errors=False):
         self.__show_arch = show_arch
         self.__debug = debug
         self.__verbose = verbose
         self.__purge_unused = purge_unused
         self.__physically_remove = physically_remove
         self.__simulate = simulate
-        self.__prompt = prompt
+        self.__assume_yes = assume_yes
         self.__fatal_errors = fatal_errors
         
     @property
@@ -134,9 +77,9 @@ class Modes:
         return self.__simulate
     
     @property
-    def prompt(self):
-        return self.__prompt
-    
+    def assume_yes(self):
+        return self.__assume_yes
+
     @property
     def fatal_errors(self):
         return self.__fatal_errors
@@ -245,8 +188,9 @@ class Runner:
     def __debug_message(self, message):
         if self.modes.debug:
             print('Debug message: {0}'.format(message))
-    
-    def __is_belong_to_group(self, user_name, group_name):
+
+    @staticmethod
+    def __is_belong_to_group(user_name, group_name):
         try:
             group = grp.getgrnam(group_name)
             return user_name in group.gr_mem
@@ -346,7 +290,7 @@ class Runner:
                     
     def __examine_and_apply_changes(self, cache, tasks, enclosure, coownership, is_upgrading=False):
         changes = cache.get_changes()
-        self.applying_ui.show_changes(cache, ConcretePkgTasks(tasks), is_upgrading)
+        self.applying_ui.show_changes(cache, ConcretePkgTasks(cache, tasks), is_upgrading)
 
         self.handlers.resolving_done()
 
@@ -363,16 +307,13 @@ class Runner:
                 errors = True
                 if self.modes.fatal_errors:
                     raise SystemComposingByResolverError()
-                
+
             for pkg in sorted(changes):
                 concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
                 versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
-                if pkg.marked_install:
-                    if versioned_package not in enclosure:
-                        self.handlers.may_not_install(pkg)
-                        check_fatal()
-                    else:
-                        implicitly = implicitly or pkg.name not in cache tasks.install
+                if pkg.marked_install and versioned_package not in enclosure:
+                    self.handlers.may_not_install(pkg)
+                    check_fatal()
                 if pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
                     self.handlers.may_not_upgrade_to_new(pkg, pkg.candidate.version)
                     check_fatal()
@@ -382,18 +323,14 @@ class Runner:
                 if pkg.marked_keep:
                     self.handlers.may_not_keep()
                     check_fatal()
-                if pkg.marked_delete:
-                    if not pkg.is_auto_removable and not concrete_package.is_sole_own(concrete_package, self.username):
-                        self.handlers.may_not_remove(pkg)
-                        check_fatal()
+                if pkg.marked_delete and not pkg.is_auto_removable and not coownership.is_sole_own(concrete_package, self.username):
+                    self.handlers.may_not_remove(pkg)
+                    check_fatal()
                 if pkg.is_inst_broken and not pkg.is_now_broken:
                     self.handlers.may_not_break(pkg)
                     check_fatal()
 
-                #TODO: Also process "unmarkauto" !
-                addend = [pkg.name]
-                    
-                is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or 
+                is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or
                                       pkg.marked_upgrade or pkg.marked_downgrade)
                 if is_setup_operation:
                     #TODO: Может быть я должен просматривать весь список origins?
@@ -404,15 +341,15 @@ class Runner:
 #                         self.handlers.may_not_install_from_this_archive(origin.archive)
 #                         check_fatal()
                         
-                    #TODO: Действительно ли я должен проверять это?                     
+                    #TODO: Действительно ли я должен проверять это?
                     if not origin.trusted:
                         self.handlers.package_is_not_trusted(pkg)
                         check_fatal()
             if errors:
                 raise SystemComposingByResolverError()
-                     
-#        agree = self.applying_ui.prompt_agree() if self.modes.prompt else True
-        if self.applying_ui.prompt_agree():
+
+        #TODO: Is it right?
+        if self.modes.assume_yes or self.applying_ui.prompt_agree():
             try:
                 if not self.modes.simulate:
                     cache.commit(self.progresses.acquire, self.progresses.install)
@@ -433,7 +370,7 @@ class Runner:
         cache = apt.Cache()
         enclosure = self.__load_enclosure()
         cache.upgrade(full_upgrade)
-        self.__examine_and_apply_changes(cache, Tasks(), enclosure, is_upgrading=True)
+        self.__examine_and_apply_changes(cache, Tasks(), enclosure, coownership=None,is_upgrading=True)
               
     def perform_operations(self, tasks):
         if not self.has_privileges:
@@ -444,13 +381,18 @@ class Runner:
         coownership = self.__load_coownership_list()
         enclosure = self.__load_enclosure()
 
-        #TODO: Implement good formatting of these messages:
-        self.__debug_message("You want to install: " + list_to_str(tasks.install))
-        self.__debug_message("you want to remove: " + list_to_str(tasks.remove))
-        self.__debug_message("you want to physically remove: " + list_to_str(tasks.physically_remove))
-        self.__debug_message("you want to purge: " + list_to_str(tasks.purge))
-        self.__debug_message("you want to markauto: " + list_to_str(tasks.markauto))
-        self.__debug_message("you want to unmarkauto: " + list_to_str(tasks.unmarkauto))
+        if tasks.install:
+            self.__debug_message("You want to install: " + list_to_str(tasks.install))
+        if tasks.remove:
+            self.__debug_message("you want to remove: " + list_to_str(tasks.remove))
+        if tasks.physically_remove:
+            self.__debug_message("you want to physically remove: " + list_to_str(tasks.physically_remove))
+        if tasks.purge:
+            self.__debug_message("you want to purge: " + list_to_str(tasks.purge))
+        if tasks.markauto:
+            self.__debug_message("you want to markauto: " + list_to_str(tasks.markauto))
+        if tasks.unmarkauto:
+            self.__debug_message("you want to unmarkauto: " + list_to_str(tasks.unmarkauto))
 
         errors = False
 
@@ -526,13 +468,13 @@ class Runner:
                 pkg = cache[package_name]
                 if pkg.is_installed:
                     if self.username != "root":
-                        self.handlers.may_not_physically_remove(pkg.name)
+                        self.handlers.may_not_physically_remove(pkg)
                         check_fatal()
                     else:
                         try:
                             coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
                         except PackageIsNotInstalled:
-                            self.handlers.simple_removation(pkg.name)
+                            self.handlers.simple_removation(pkg)
                         finally:
                             pkg.mark_delete(purge=self.modes.purge_unused)
                 else:
@@ -545,13 +487,13 @@ class Runner:
                 pkg = cache[package_name]
                 if pkg.is_installed:
                     if self.username != "root":
-                        self.handlers.may_not_purge(pkg.name)
+                        self.handlers.may_not_purge(pkg)
                         check_fatal()
                     else:
                         try:
                             coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
                         except PackageIsNotInstalled:
-                            self.handlers.simple_removation(pkg.name)
+                            self.handlers.simple_removation(pkg)
                         finally:
                             pkg.mark_delete(purge=True)
                 else:
@@ -569,7 +511,7 @@ class Runner:
                         if not coownership.is_somebody_own(concrete_package):
                             pkg.mark_auto(auto=True)
                     except UserDoesNotOwnPackage:
-                        self.handlers.may_not_markauto(pkg.name)
+                        self.handlers.may_not_markauto(pkg)
                         check_fatal()
                 else:
                     self.handlers.is_not_installed(pkg, "markauto")
@@ -591,13 +533,13 @@ class Runner:
                             self.handlers.may_not_markauto(pkg, True)
                             check_fatal()
                 else:
-                    self.handlers.is_not_installed(pkg.name, "unmarkauto")
+                    self.handlers.is_not_installed(pkg, "unmarkauto")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
         if errors:
             raise SystemComposingByResolverError()
 
-        self.__examine_and_apply_changes(cache, tasks, enclosure)
+        self.__examine_and_apply_changes(cache, tasks, enclosure, coownership)
         if not self.modes.simulate:
             self.__save_coownership_list(coownership)

@@ -21,11 +21,11 @@
 # THE SOFTWARE.
 
 
-import os
 import sys
 import argparse
 import apt.progress.base
 import apt.progress.text
+from limitedapt.tasks import *
 from limitedapt.errors import StubError
 from limitedapt.runners import *
 from limitedapt.constants import *
@@ -71,7 +71,7 @@ def privileged_main():
     # add a common options
     #TODO: Do I really need this option?
     parser.add_argument('-a', '--show-arch', action='store_true',
-                        help='Show package name in "<name>:<arch>" format (showing architecture)')
+                        help='Always show package name in "<name>:<arch>" format (showing architecture)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Display extra information.')
     parser.add_argument('-d', '--debug', action='store_true',
                         help='Debugging mode. Print detailed information on every action.')
@@ -100,12 +100,15 @@ def privileged_main():
     # Create parsers for "major" (modification) operations
 
     parent_operation_parser = argparse.ArgumentParser(add_help=False)
+    #TODO: Show help for these arguments:
+    parent_operation_parser.add_argument('-p', '--purge-unused', action='store_true',
+                                         help="purge packages that is remove their configuration files")
     parent_operation_parser.add_argument('-s', '--simulate', action='store_true',
                                          help='''Simulate actions, but doesn't actually perform them. \
                                          This doesn't require high privileges (you may not to be a member \
                                          of "{0}" group).'''.format(UNIX_LIMITEDAPT_GROUPNAME))
-    parent_operation_parser.add_argument('-p', '--prompt', action='store_true',
-                                         help='Always prompt for confirmation on actions.')
+    parent_operation_parser.add_argument('-y', '--assume-yes', action='store_true',
+                                         help='When a yes/no prompt would be presented, assume that the user entered “yes”.')
     parent_operation_parser.add_argument('-f', '--fatal-errors', action='store_true',
                                          help='Stop and exit after first error.')
     
@@ -150,23 +153,20 @@ def privileged_main():
     for operation, help in operation_subcommands_dict.items():
         operation_subcommand_parser = subparsers.add_parser(operation, parents=[parent_operation_parser],
                                                             help=help)
-        operation_subcommand_parser.add_argument('packages', nargs='*', metavar='pkg', help='a package')        
-        if operation in ('remove', 'physically-remove', 'purge'):
-            operation_subcommand_parser.add_argument('-P', '--purge-unused', action='store_true',
-                                                     help="purge packages that is remove their configuration files")
+        operation_subcommand_parser.add_argument('packages', nargs='*', metavar='pkg', help='a package')
 
     # Parse and analyse arguments
     
     args = parser.parse_args(sys.argv[2:])
     
     simulate_mode = args.simulate if hasattr(args, 'simulate') else None
-    prompt_mode = args.prompt if hasattr(args, 'prompt') else None
+    assume_yes_mode = args.assume_yes if hasattr(args, 'assume_yes') else None
     fatal_errors_mode = args.fatal_errors if hasattr(args, 'fatal_errors') else None
     purge_unused_mode = args.purge_unused if hasattr(args, 'purge_unused') else None
     physically_remove_mode = args.physically_remove if hasattr(args, 'physically_remove') else None
 
     modes = Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode, physically_remove_mode,
-                  simulate_mode, prompt_mode, fatal_errors_mode)
+                  simulate_mode, assume_yes_mode, fatal_errors_mode)
     #TODO: Use "apt.progress.FetchProgress()" when it has been implemented
     #TODO: test it
     progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())

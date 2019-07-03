@@ -16,6 +16,7 @@
 #
 '''Coownership structure processing'''
 
+import enum
 from lxml import etree
 from limitedapt.packages import ConcretePackage
 from limitedapt.errors import *
@@ -33,6 +34,12 @@ class CoownershipImportSyntaxError(XmlImportSyntaxError):
     '''Syntax or semantic error while coownership structure parsing'''
 
 
+class Own(enum.Enum):
+    NOBODY = 0
+    ONLY_ROOT = 1
+    USERS = 2
+
+
 class CoownershipList:
 
     def __init__(self):
@@ -42,11 +49,12 @@ class CoownershipList:
         return iter(self.__data)
         
     def owners_of(self, package):
-        try:
-            return self.__data[package]
-        except KeyError:
-            return set()
-#        return self.__data.get(package, set())
+        #TODO: remove it
+#        try:
+#            return self.__data[package]
+#        except KeyError:
+#            return set()
+        return self.__data.get(package, set())
 
     def is_somebody_own(self, package):
         return package in self.__data.keys()
@@ -64,11 +72,11 @@ class CoownershipList:
         #TODO: Is it logics good? 
         if package in self.__data:
             if user in self.__data[package]:
-                raise UserAlreadyOwnsThisPackage("User '{0} has already own package '{1}".format(user, package))
+                raise UserAlreadyOwnsThisPackage("User '{0}' has already own package '{1}'".format(user, package))
             else:
                 self.__data[package].add(user)
         else:
-            self.__data[package] = { user }
+            self.__data[package] = {user}
         if also_root and user != "root":
             self.__data[package].add("root")
             
@@ -77,8 +85,12 @@ class CoownershipList:
             users = self.__data[package]
             try:
                 users.remove(user)
-                if not users:
+                if users == {"root"}:
                     del self.__data[package]
+                    return False
+                if not users or :
+                    del self.__data[package]
+                    return True
             except KeyError:
                 raise UserDoesNotOwnPackage("User '{0}' doesn't own package '{1}'".format(user, package))                
         except KeyError:
@@ -95,12 +107,11 @@ class CoownershipList:
         
     def export_to_xml(self, file):
         #TODO: remove it
-        print("EXPORT:")
-        for package, owners in sorted(self.__data.items(), key=lambda x: x[0]):
-            print(package)
-            for user in sorted(owners):
-                print("  " + user)
-        print()
+#        for package, owners in sorted(self.__data.items(), key=lambda x: x[0]):
+#            print(package)
+#            for user in sorted(owners):
+#                print("  " + user)
+#        print()
         
         root = etree.Element("packages")
         for package, owners in sorted(self.__data.items(), key=lambda x: x[0]):

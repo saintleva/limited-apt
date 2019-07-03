@@ -42,7 +42,7 @@ class ConcretePackage:
         return hash(str(self))
     
     def __str__(self):
-        return self.name + ":" + self.architecture
+        return "{0}:{1}".format(self.name, self.architecture)
     
         
 class VersionedPackage(ConcretePackage):

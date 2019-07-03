@@ -53,6 +53,7 @@ class Applying(Modded):
             terminal_width = get_terminal_width()
             
             package_list = sorted((pkg for pkg in changes if pkg_predicate(pkg)), key=lambda pkg: pkg.name)
+
             if package_list:
                 print(header)
                 line = '  '
@@ -73,7 +74,7 @@ class Applying(Modded):
                 if line != '  ':
                     print(line)
 
-        print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.is_installed,
+        print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.is_installed and not pkg.marked_upgrade,
                                              'These new packages will be logically installed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_install,
                                              'These new packages will be physically installed:')
@@ -93,13 +94,14 @@ class Applying(Modded):
                                              'These packages will be kept at they current version:')
 
         update_count = sum(1 for pkg in changes if pkg.marked_upgrade)
-        logically_installed_count = sum(1 for pkg in changes if pkg in tasks.install and pkg.is_installed)
+        logically_installed_count = sum(1 for pkg in changes if pkg in tasks.install and pkg.is_installed and not pkg.marked_upgrade)
         logically_remove_count = sum(1 for pkg in changes if pkg in tasks.remove and not pkg.marked_delete)
 
         #TODO: Calculate count of "have not been updated"
-        print('''{0} packages will be updated, {1} new will be logically installed, {2} new will be physically installed, 
-        {3} marked for logical deletion, {3} marked for physically deletion.'''
-              .format(update_count, logically_installed_count, cache.install_count, logically_remove_count, cache.delete_count))
+        print(
+            '''{0} packages will be updated, {1} new will be logically installed, {2} new will be physically installed, ''' \
+            '''{3} marked for logical deletion, {4} marked for physically deletion.'''
+                .format(update_count, logically_installed_count, cache.install_count, logically_remove_count, cache.delete_count))
         print('''Required to download {0} archives. '''.format(pretty_size_str(cache.required_download)), end='')
         if cache.required_space >= 0:
             print('''{0} will be occupied after unpacking.'''.format(pretty_size_str(cache.required_space)))
