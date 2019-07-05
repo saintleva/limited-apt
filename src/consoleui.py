@@ -78,9 +78,9 @@ class Applying(Modded):
                                              'These new packages will be logically installed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_install,
                                              'These new packages will be physically installed:')
-        print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.marked_upgrade,
+        print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.marked_upgrade and not pkg.marked_install,
                                              'These packages will be logically installed but physically upgrade:')
-        print_onetype_operation_package_list(lambda pkg: pkg not in tasks.install and pkg.marked_upgrade,
+        print_onetype_operation_package_list(lambda pkg: pkg not in tasks.install and pkg.marked_upgrade and not pkg.marked_install,
                                              'These packages will be upgrade:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_reinstall,
                                              'These packages will be reinstalled:')

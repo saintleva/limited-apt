@@ -446,8 +446,7 @@ class Runner:
                 if pkg.is_installed:
                     try:
                         concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
-                        coownership.remove_ownership(concrete_package, self.username)
-                        if not coownership.is_somebody_own(concrete_package):
+                        if coownership.remove_ownership(concrete_package, self.username) == Own.NOBODY:
                             pkg.mark_delete(purge=self.modes.purge_unused)
                     except UserDoesNotOwnPackage:
                         self.handlers.may_not_remove(pkg)
@@ -507,8 +506,7 @@ class Runner:
                 if pkg.is_installed:
                     try:
                         concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
-                        coownership.remove_ownership(concrete_package, self.username)
-                        if not coownership.is_somebody_own(concrete_package):
+                        if coownership.remove_ownership(concrete_package, self.username) == Own.NOBODY:
                             pkg.mark_auto(auto=True)
                     except UserDoesNotOwnPackage:
                         self.handlers.may_not_markauto(pkg)

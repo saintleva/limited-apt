@@ -210,6 +210,9 @@ def privileged_main():
                 add_unsuffixed_operation_to_tasks(operation, tasks)
             runner.perform_operations(tasks)
         sys.exit(ExitCodes.GOOD.value)
+    #TODO: Заставиль это работать
+    except KeyboardInterrupt:
+        sys.exit(ExitCodes.INTERRUPTED.value)
     except GoodExit:
         sys.exit(ExitCodes.GOOD.value)
     except YouHaveNotUserPrivilegesError as err:

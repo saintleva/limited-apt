@@ -56,7 +56,7 @@ class CoownershipList:
 #            return set()
         return self.__data.get(package, set())
 
-    def is_somebody_own(self, package):
+    def is_any_user_own(self, package):
         return package in self.__data.keys()
     
     def his_packages(self, user):
@@ -87,10 +87,11 @@ class CoownershipList:
                 users.remove(user)
                 if users == {"root"}:
                     del self.__data[package]
-                    return False
-                if not users or :
+                    return Own.ONLY_ROOT
+                if not users:
                     del self.__data[package]
-                    return True
+                    return Own.NOBODY
+                return Own.USERS
             except KeyError:
                 raise UserDoesNotOwnPackage("User '{0}' doesn't own package '{1}'".format(user, package))                
         except KeyError:

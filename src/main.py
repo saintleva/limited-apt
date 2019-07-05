@@ -25,7 +25,6 @@ import sys
 import os
 import subprocess
 
-
 PRIVILEGED_EXECUTABLE = '/usr/local/sbin/limited-apt_privileged'
 
 def main():
@@ -45,7 +44,6 @@ def main():
     #    print(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
     #    print()
     exitcode = subprocess.call(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
-
     sys.exit(exitcode)
     
 if __name__ == '__main__':

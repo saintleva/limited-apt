@@ -20,6 +20,7 @@ import enum
 
 class ExitCodes(enum.Enum):
     GOOD = 0
+    INTERRUPTED = 111111
     INVALID_OPERATION_ON_THE_SUFFIX = 2
     YOU_HAVE_NOT_PRIVILEGES = 10
     WANT_TO_DO_SYSTEM_COMPOSING = 11
