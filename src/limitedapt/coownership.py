@@ -44,16 +44,11 @@ class CoownershipList:
 
     def __init__(self):
         self.__data = {}
-        
+
     def __iter__(self):
         return iter(self.__data)
         
     def owners_of(self, package):
-        #TODO: remove it
-#        try:
-#            return self.__data[package]
-#        except KeyError:
-#            return set()
         return self.__data.get(package, set())
 
     def is_any_user_own(self, package):

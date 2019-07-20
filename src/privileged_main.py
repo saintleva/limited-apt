@@ -97,21 +97,27 @@ def privileged_main():
                           help='Print list of the packages installed (or unmarked auto) by you. Has not subparameters.',
                           add_help=False)
 
+    # create the parser for the "owners-of" command
+    ownersof_parser = subparsers.add_parser('owners-of',
+                                            help='Print list of user.',
+                                            add_help=False)
+    ownersof_parser.add_argument('packages', nargs='*', metavar='pkg', help='a package')
+
     # Create parsers for "major" (modification) operations
 
     parent_operation_parser = argparse.ArgumentParser(add_help=False)
     #TODO: Show help for these arguments:
     parent_operation_parser.add_argument('-p', '--purge-unused', action='store_true',
                                          help="purge packages that is remove their configuration files")
+    parent_operation_parser.add_argument('-f', '--fatal-errors', action='store_true',
+                                         help='Stop and exit after first error.')
+    parent_operation_parser.add_argument('-y', '--assume-yes', action='store_true',
+                                         help='When a yes/no prompt would be presented, assume that the user entered “yes”.')
     parent_operation_parser.add_argument('-s', '--simulate', action='store_true',
                                          help='''Simulate actions, but doesn't actually perform them. \
                                          This doesn't require high privileges (you may not to be a member \
                                          of "{0}" group).'''.format(UNIX_LIMITEDAPT_GROUPNAME))
-    parent_operation_parser.add_argument('-y', '--assume-yes', action='store_true',
-                                         help='When a yes/no prompt would be presented, assume that the user entered “yes”.')
-    parent_operation_parser.add_argument('-f', '--fatal-errors', action='store_true',
-                                         help='Stop and exit after first error.')
-    
+
     operation_subcommands_dict = {'install' : 'Install/upgrade (non-system) packages by an ordinary user (you).',
                                   'remove' : 'Remove packages that you has installed later.',
                                   'physically-remove' : 'Removes package even though somebody but me (root) owns it',
@@ -159,56 +165,59 @@ def privileged_main():
     
     args = parser.parse_args(sys.argv[2:])
     
-    simulate_mode = args.simulate if hasattr(args, 'simulate') else None
-    assume_yes_mode = args.assume_yes if hasattr(args, 'assume_yes') else None
-    fatal_errors_mode = args.fatal_errors if hasattr(args, 'fatal_errors') else None
-    purge_unused_mode = args.purge_unused if hasattr(args, 'purge_unused') else None
-    physically_remove_mode = args.physically_remove if hasattr(args, 'physically_remove') else None
 
-    modes = Modes(args.show_arch, args.debug, args.verbose, purge_unused_mode, physically_remove_mode,
-                  simulate_mode, assume_yes_mode, fatal_errors_mode)
-    #TODO: Use "apt.progress.FetchProgress()" when it has been implemented
-    #TODO: test it
-    progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
-    runner = Runner(user_id, modes, consoleui.ErrorHandlers(), consoleui.Applying(), progresses, sys.stderr) 
+    display_modes = DisplayModes(args.show_arch, args.verbose, args.debug)
         
     try:
-        if args.subcommand == 'update':
+        if args.subcommand in operation_subcommands_dict.keys() | {'safe-upgrade', 'full-upgrade', 'diverse'}:
+            work_modes = WorkModes(args.purge_unused, args.fatal_errors, args.assume_yes, args.simulate)
+            # TODO: Use "apt.progress.FetchProgress()" when it has been implemented
+            # TODO: test it
+            progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
+            runner = ModificationRunner(user_id, display_modes, work_modes, consoleui.ErrorHandlers(), consoleui.Applying(),
+                                        progresses, sys.stderr)
+            if args.subcommand == 'safe-upgrade':
+                runner.upgrade(full_upgrade=False)
+            elif args.subcommand == 'full-upgrade':
+                runner.upgrade(full_upgrade=True)
+            else:
+                tasks = Tasks()
+                if args.subcommand == 'install':
+                    tasks.install = args.packages
+                elif args.subcommand == 'remove':
+                    tasks.remove = args.packages
+                elif args.subcommand == 'physically-remove':
+                    tasks.physically_remove = args.packages
+                elif args.subcommand == 'purge':
+                    tasks.purge = args.packages
+                elif args.subcommand == 'markauto':
+                    tasks.markauto = args.packages
+                elif args.subcommand == 'unmarkauto':
+                    tasks.unmarkauto = args.packages
+                elif args.subcommand == 'diverse':
+                    for operation in args.package_operations:
+                        add_unsuffixed_operation_to_tasks(operation, tasks)
+                runner.perform_operations(tasks)
+        elif args.subcommand == 'update':
+            runner = Runner(user_id, display_modes, None, sys.stderr)
             runner.update()
-        elif args.subcommand == 'safe-upgrade':
-            runner.upgrade(full_upgrade=False)
-        elif args.subcommand == 'full-upgrade':
-            runner.upgrade(full_upgrade=True)
-        elif args.subcommand == 'print-enclosure':
-            if modes.wordy():
-                print('Packages you ({0}) may install:'.format(runner.username))            
-            for name in runner.get_printed_enclosure():
-                print(name)
-        elif args.subcommand == 'list-of-mine':
-            if modes.wordy(): 
-                print('Packages installed by you ({0}):'.format(runner.username))            
-            for name in runner.get_printed_list_of_mine():
-                print(name)
-        elif args.subcommand in operation_subcommands_dict.keys():
-            tasks = Tasks()
-            if args.subcommand == 'install':
-                tasks.install = args.packages
-            elif args.subcommand == 'remove':
-                tasks.remove = args.packages
-            elif args.subcommand == 'physically-remove':
-                tasks.physically_remove = args.packages
-            elif args.subcommand == 'purge':
-                tasks.purge = args.packages
-            elif args.subcommand == 'markauto':
-                tasks.markauto = args.packages
-            if args.subcommand == 'unmarkauto':
-                tasks.unmarkauto = args.packages
-            runner.perform_operations(tasks)
-        elif args.subcommand == 'diverse':
-            tasks = Tasks()
-            for operation in args.package_operations:
-                add_unsuffixed_operation_to_tasks(operation, tasks)
-            runner.perform_operations(tasks)
+        elif args.subcommand in ['print-enclosure', 'list-of-mine', 'owners-of']:
+            runner = PrintRunner(user_id, display_modes, sys.stderr)
+            if args.subcommand == 'print-enclosure':
+                if modes.wordy():
+                    print('Packages you ({0}) may install:'.format(runner.username))
+                for name in runner.get_printed_enclosure():
+                    print(name)
+            elif args.subcommand == 'list-of-mine':
+                if modes.wordy():
+                    print('Packages installed by you ({0}):'.format(runner.username))
+                for name in runner.get_printed_list_of_mine():
+                    print(name)
+            elif args.subcommand == 'owners-of':
+                if modes.wordy():
+                    print('Users that has install "{0}" package:'.format(args.package_name)
+                for user in runner.get_owners_of(args.package_name):
+                    print(user)
         sys.exit(ExitCodes.GOOD.value)
     #TODO: Заставиль это работать
     except KeyboardInterrupt:

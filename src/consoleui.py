@@ -19,7 +19,7 @@
 import time
 import subprocess
 from limitedapt.constants import *
-from limitedapt.runners import Modded
+from limitedapt.modes import Modded
 from metrics import *
 
 

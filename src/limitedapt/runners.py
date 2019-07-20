@@ -27,73 +27,10 @@ from limitedapt.packages import *
 from limitedapt.coownership import *
 from limitedapt.enclosure import *
 from limitedapt.tasks import *
+from limitedapt.modes import *
 
 
 DEBUG = True
-
-
-class Modes:
-    '''limited-apt application modes (options) incapsulation'''
-    
-    def __init__(self, show_arch, debug, verbose, purge_unused, physically_remove,
-                 simulate=False, assume_yes=False, fatal_errors=False):
-        self.__show_arch = show_arch
-        self.__debug = debug
-        self.__verbose = verbose
-        self.__purge_unused = purge_unused
-        self.__physically_remove = physically_remove
-        self.__simulate = simulate
-        self.__assume_yes = assume_yes
-        self.__fatal_errors = fatal_errors
-        
-    @property
-    def show_arch(self):
-        return self.__show_arch
-    
-    def pkg_str(self, pkg):
-        return pkg.shortname + ":" + pkg.candidate.architecture if self.show_arch else pkg.name
-
-    @property
-    def debug(self):
-        return self.__debug
-    
-    @property
-    def verbose(self):
-        return self.__verbose
-    
-    def wordy(self):
-        return self.debug or self.verbose
-    
-    @property
-    def purge_unused(self):
-        return self.__purge_unused
-    
-    @property
-    def physically_remove(self):
-        return self.__physically_remove
-            
-    @property
-    def simulate(self):
-        return self.__simulate
-    
-    @property
-    def assume_yes(self):
-        return self.__assume_yes
-
-    @property
-    def fatal_errors(self):
-        return self.__fatal_errors
-
-
-class Modded:
-    
-    @property
-    def modes(self):
-        return self.__modes
-    
-    @modes.setter
-    def modes(self, modes):
-        self.__modes = modes
 
      
 class Progresses:
@@ -125,6 +62,82 @@ def list_to_str(items):
         result += str(item)
         is_first = False
     return result
+
+
+class RunnerBase:
+
+    def __init__(self, user_id, display_modes, debug_stream):
+        self.__display_modes = display_modes
+        self.__debug_stream = debug_stream
+
+        def effective_username(user_id):
+            if user_id == 0:
+                return "root"
+            name = pwd.getpwuid(user_id).pw_name
+            return "root" if name == "root" or \
+                             self.__is_belong_to_group(name, constants.UNIX_LIMITEDAPT_ROOTS_GROUPNAME) \
+                else name
+
+        self.__username = effective_username(user_id)
+        self.__check_user_privileges()
+
+    @property
+    def display_modes(self):
+        return self.__display_modes
+
+    @property
+    def debug_stream(self):
+        return self.__debug_stream
+
+    @property
+    def username(self):
+        return self.__username
+
+    @property
+    def has_privileges(self):
+        return self.__has_privileges
+
+    def __debug_message(self, message):
+        if self.modes.debug:
+            print('Debug message: {0}'.format(message))
+
+    @staticmethod
+    def __is_belong_to_group(user_name, group_name):
+        try:
+            group = grp.getgrnam(group_name)
+            return user_name in group.gr_mem
+        except KeyError:
+            raise GroupNotExistError(group_name)
+
+    def __check_user_privileges(self):
+        self.__has_privileges = self.username == "root" or \
+                                self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
+        self.__may_upgrade_package = self.username == "root" or \
+                                     self.__is_belong_to_group(self.username,
+                                                               constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME)
+        self.__debug_message('''your username is: "{0}", ''' \
+                             '''you has privileges for modification operations: "{1}", ''' \
+                             format(self.username, self.has_privileges)
+        if self.modes.purge_unused and self.username != "root":
+            raise YouMayNotPurgeError()
+
+    # TODO: Do I really need it?
+    def __load_program_options(self):
+        self.__default_release = apt_pkg.config["APT::Default-Release"] or None
+
+
+class ModificationRunner(RunnerBase):
+
+    def __check_user_privileges(self):
+
+        super().__check_user_privileges()
+
+        self.__may_upgrade_package = self.username == "root" or \
+                                     self.__is_belong_to_group(self.username,
+                                                               constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME)
+        self.__debug_message('''you may upgrade installed packages even they are system-constitutive: "{0}".'''.
+                             format(self.may_upgrade_package))
+
 
 class Runner:
     
@@ -279,6 +292,21 @@ class Runner:
     
     def get_printed_list_of_mine(self):
         return (self.modes.pkg_str(pkg) for pkg in self.get_list_of_mine())
+
+    def get_owners_of(self, package_name):
+        try:
+            cache = apt.Cache()
+            pkg = cache[package_name]
+            package = ConcretePackage(pkg.name, pkg.candidate.architecture)
+            coownership_list = self.__load_coownership_list()
+            users = coownership_list.owners_of(package)
+            if users:
+                return users
+            else:
+                return {"root"} if pkg.is_installed and not pkg.is_auto_installed else set()
+        except KeyError:
+            return set()
+
             
     def get_printed_enclosure(self):
         cache = apt.Cache()
