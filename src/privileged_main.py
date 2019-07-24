@@ -204,17 +204,17 @@ def privileged_main():
         elif args.subcommand in ['print-enclosure', 'list-of-mine', 'owners-of']:
             runner = PrintRunner(user_id, display_modes, sys.stderr)
             if args.subcommand == 'print-enclosure':
-                if modes.wordy():
+                if display_modes.wordy():
                     print('Packages you ({0}) may install:'.format(runner.username))
                 for name in runner.get_printed_enclosure():
                     print(name)
             elif args.subcommand == 'list-of-mine':
-                if modes.wordy():
+                if display_modes.wordy():
                     print('Packages installed by you ({0}):'.format(runner.username))
                 for name in runner.get_printed_list_of_mine():
                     print(name)
             elif args.subcommand == 'owners-of':
-                if modes.wordy():
+                if display_modes.wordy():
                     print('Users that has install "{0}" package:'.format(args.package_name)
                 for user in runner.get_owners_of(args.package_name):
                     print(user)
