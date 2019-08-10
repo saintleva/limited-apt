@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,24 +15,24 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import enum
+import functools
+import apt
 
 
-class ExitCodes(enum.Enum):
-    GOOD = 0
-    INTERRUPTED = 111111
-    INVALID_OPERATION_ON_THE_SUFFIX = 2
-    YOU_HAVE_NOT_PRIVILEGES = 10
-    WANT_TO_DO_SYSTEM_COMPOSING = 11
-    SYSTEM_COMPOSING_BY_RESOLVER = 12
-    YOU_ARE_NOT_COOWNER_OF_PACKAGE = 13
-    DPKG_JOUNAL_DIRTY = 20
-    GROUP_NOT_EXIST = 30
-    PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY = 40
-    ERROR_WHILE_READING_CONFIG_FILES = 51
-    ERROR_WHILE_WRITING_CONFIG_FILES = 52
-    ERROR_WHILE_PARSING_CONFIG_FILES = 53
-    LOCK_FAILED = 60
-    FETCH_CANCELLED = 61
-    FETCH_FAILED = 62
-    STUB = 100
+def run_once(func):
+    """Runs a function (without parameters) (successfully) only once.
+    The running can be reset by setting the `has_run` attribute to False
+    """
+    @functools.wraps(func)
+    def wrapper():
+        if not wrapper.has_run:
+            wrapper.result = func()
+            wrapper.has_run = True
+        return wrapper.result
+    wrapper.has_run = False
+    return wrapper
+
+
+@run_once
+def get_cache():
+    return apt.Cache()

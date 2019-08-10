@@ -6,6 +6,7 @@ import apt
 
 from limitedapt.packages import VersionedPackage
 from limitedapt.enclosure import *
+from limitedapt.single import get_cache
 
 
 def debug_suidbit(place):
@@ -34,7 +35,7 @@ def update_enclosure_by_debtags(filename):
     
     enclosure = Enclosure()
     enclosure.import_from_xml(filename)
-    cache = apt.Cache()
+    cache = get_cache()
     for name in names:
         pkg = cache[name]
         enclosure.add_versioned_package(VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version))

@@ -17,7 +17,7 @@
 
 
 from limitedapt.packages import *
-
+from limitedapt.single import get_cache
 
 class Tasks:
 
@@ -32,7 +32,8 @@ class Tasks:
 
 class OnetypeConcretePkgTasks:
 
-    def __init__(self, cache, onetype_tasks):
+    def __init__(self, onetype_tasks):
+        cache = get_cache()
         self.__container = set()
         for task in onetype_tasks:
             pkg = cache[task]
@@ -46,13 +47,13 @@ class OnetypeConcretePkgTasks:
 
 class ConcretePkgTasks:
 
-    def __init__(self, cache, tasks):
-        self.__install = OnetypeConcretePkgTasks(cache, tasks.install)
-        self.__remove = OnetypeConcretePkgTasks(cache, tasks.remove)
-        self.__physically_remove = OnetypeConcretePkgTasks(cache, tasks.physically_remove)
-        self.__purge = OnetypeConcretePkgTasks(cache, tasks.purge)
-        self.__markauto = OnetypeConcretePkgTasks(cache, tasks.markauto)
-        self.__unmarkauto = OnetypeConcretePkgTasks(cache, tasks.unmarkauto)
+    def __init__(self, tasks):
+        self.__install = OnetypeConcretePkgTasks(tasks.install)
+        self.__remove = OnetypeConcretePkgTasks(tasks.remove)
+        self.__physically_remove = OnetypeConcretePkgTasks(tasks.physically_remove)
+        self.__purge = OnetypeConcretePkgTasks(tasks.purge)
+        self.__markauto = OnetypeConcretePkgTasks(tasks.markauto)
+        self.__unmarkauto = OnetypeConcretePkgTasks(tasks.unmarkauto)
 
     @property
     def install(self):

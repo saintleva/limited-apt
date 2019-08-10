@@ -18,13 +18,13 @@
 
 import time
 import subprocess
+from limitedapt import single
 from limitedapt.constants import *
 from limitedapt.modes import Modded
 from metrics import *
 
 
-#TODO: Is it right?
-#@functools.lru_cache
+@single.run_once
 def get_terminal_width():
     try:        
         columns = subprocess.getoutput("stty size").split()[1]
@@ -35,7 +35,7 @@ def get_terminal_width():
      
 class Applying(Modded):
     
-    def show_changes(self, cache, tasks, is_upgrading=False):
+    def show_changes(self, tasks, is_upgrading=False):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
 
@@ -147,9 +147,9 @@ class ErrorHandlers(Modded):
             print('''Error: package "{0}" which you {1} is system-constitutive and nobody '''
                   '''but root may install it'''.format(name, purpose))
         
-    def may_not_upgrade_to_new(self, pkg, version):
+    def may_not_upgrade_to_new(self, pkg):
         print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
-              '''this new version is system-constitutive'''.format(self.modes.pkg_str(pkg), version))
+              '''this new version is system-constitutive'''.format(self.modes.pkg_str(pkg), pkg.candidate.version))
         
     def is_not_installed(self, pkg, why_must_be):
         action_dict = {"remove" : 'remove',
@@ -178,19 +178,41 @@ class ErrorHandlers(Modded):
               format(self.modes.pkg_str(pkg)))
         
     def may_not_downgrade(self):
-        print('''Error: you have not permissions to downgrade packages''')
+        print('''Error: cannot downgrade packages''')
+
+    def force_downgrade(self, pkg):
+        if self.modes.wordy():
+            print('''Forced by root: downgrading package "{0}" to version "{1}"'''.
+                  format(self.modes.pkg_str(pkg), pkg.candidate.version))
         
     def may_not_keep(self):
-        print('''Error: you have not permissions to keep packages at their current versions''')
-        
+        print('''Error: cannot keep packages at their current versions''')
+
+    def force_keep(self, pkg):
+        if self.modes.wordy():
+            print('''Forced by root: package "{0}" will be kept at their current versions "{1}"'''.
+                  format(self.modes.pkg_str(pkg), pkg.candidate.version))
+
     def may_not_break(self, pkg):
         print('''Error: your actions make package "{0}" broken'''.format(self.modes.pkg_str(pkg)))
+
+    def force_break(self, pkg):
+        if self.modes.wordy():
+            print('''Forced by root: package "{0}" will be broken in order to safisfy dependencies'''.
+                  format(self.modes.pkg_str(pkg)))
 
     def may_not_install_from_this_archive(self, archive):
         print('''Error: you have not permissions to install packages from "{0}" archive (suite)'''.format(archive))
 
-    def package_is_not_trusted(self, pkg):
+    def package_is_not_trusted(self, pkg)
         print('''Error: package "{0}" is not trusted".'''.format(self.modes.pkg_str(pkg)))
+
+    def force_untrusted(self, pkg):
+        print('''Forced by root: package "{0}" will be installed although this is not trusted'''.format(self.modes.pkg_str(pkg)))
+
+    #TODO: remove it
+#    def may_not_force(self):
+#        print('''Error: only root is able to use "--force" option''')
         
     def simple_removation(self, pkg):
         if self.modes.verbose:

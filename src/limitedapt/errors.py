@@ -68,6 +68,8 @@ class YouMayNotPerformError(YouHaveNotUserPrivilegesError):
     def __init__(self, group_name):
         super().__init__(group_name)
 
+class OnlyRootMayForceError(YouHaveNotPrivilegesError): pass
+
 class YouMayNotPurgeError(YouHaveNotPrivilegesError): pass
 
 class GroupNotExistError(TerminationError, GroupProblem):
@@ -105,10 +107,12 @@ class WantToDoSystemComposingError(AttempToPerformSystemComposingError): pass
 
 class SystemComposingByResolverError(AttempToPerformSystemComposingError): pass
 
+class DpkgJournalDirtyError(TerminationError): pass
+
 class AptProcessingError(TerminationError): pass
 
 class LockFailedError(AptProcessingError): pass
-    
+
 class FetchCancelledError(AptProcessingError): pass
 
-class FetchFailedError(AptProcessingError): pass 
+class FetchFailedError(AptProcessingError): pass

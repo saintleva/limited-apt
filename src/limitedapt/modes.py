@@ -44,11 +44,16 @@ class DisplayModes:
 
 class WorkModes:
 
-    def __init__(self, purge_unused, fatal_errors, assume_yes, simulate):
+    def __init__(self, force, purge_unused, fatal_errors, assume_yes, simulate):
+        self.__force = force
         self.__purge_unused = purge_unused
         self.__fatal_errors = fatal_errors
         self.__assume_yes = assume_yes
         self.__simulate = simulate
+
+    @property
+    def force(self):
+        return self.__force
 
     @property
     def purge_unused(self):

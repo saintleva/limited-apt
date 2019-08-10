@@ -26,7 +26,7 @@ import argparse
 import apt.progress.base
 import apt.progress.text
 from limitedapt.tasks import *
-from limitedapt.errors import StubError
+from limitedapt.errors import *
 from limitedapt.runners import *
 from limitedapt.constants import *
 from limitedapt.debug import debug_suidbit
@@ -85,9 +85,7 @@ def privileged_main():
                           of non-system packages ordinary user can install (enclosure).', add_help=False)
      
     # create the parser for the "print-enclosure" command
-    print_enclosure_parser = subparsers.add_parser('print-enclosure',
-                                                   help='Print enclosure (the list of non-system packages \
-                                                   ordinary user can install).')
+    subparsers.add_parser('print-enclosure', help='Print enclosure (the list of non-system packages ordinary user can install).')
     #TODO: remove it
 #     print_enclosure_parser.add_argument('-r', '--versions', action='store_true',
 #                                         help='''Show version constraints for 'allowed' packages.''')
@@ -98,18 +96,18 @@ def privileged_main():
                           add_help=False)
 
     # create the parser for the "owners-of" command
-    ownersof_parser = subparsers.add_parser('owners-of',
-                                            help='Print list of user.',
-                                            add_help=False)
-    ownersof_parser.add_argument('packages', nargs='*', metavar='pkg', help='a package')
+    ownersof_parser = subparsers.add_parser('owners-of', help='Print list of users who owns package.', add_help=False)
+    ownersof_parser.add_argument('package', help='package name')
 
     # Create parsers for "major" (modification) operations
 
     parent_operation_parser = argparse.ArgumentParser(add_help=False)
     #TODO: Show help for these arguments:
+    parent_operation_parser.add_argument('-f', '--force', action='store_true',
+                                         help="Allow root to do (implicit) forbidden actions.")
     parent_operation_parser.add_argument('-p', '--purge-unused', action='store_true',
-                                         help="purge packages that is remove their configuration files")
-    parent_operation_parser.add_argument('-f', '--fatal-errors', action='store_true',
+                                         help="Purge packages that is remove their configuration files")
+    parent_operation_parser.add_argument('-e', '--fatal-errors', action='store_true',
                                          help='Stop and exit after first error.')
     parent_operation_parser.add_argument('-y', '--assume-yes', action='store_true',
                                          help='When a yes/no prompt would be presented, assume that the user entered “yes”.')
@@ -170,7 +168,7 @@ def privileged_main():
         
     try:
         if args.subcommand in operation_subcommands_dict.keys() | {'safe-upgrade', 'full-upgrade', 'diverse'}:
-            work_modes = WorkModes(args.purge_unused, args.fatal_errors, args.assume_yes, args.simulate)
+            work_modes = WorkModes(args.force, args.purge_unused, args.fatal_errors, args.assume_yes, args.simulate)
             # TODO: Use "apt.progress.FetchProgress()" when it has been implemented
             # TODO: test it
             progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
@@ -215,8 +213,8 @@ def privileged_main():
                     print(name)
             elif args.subcommand == 'owners-of':
                 if display_modes.wordy():
-                    print('Users that has install "{0}" package:'.format(args.package_name)
-                for user in runner.get_owners_of(args.package_name):
+                    print('Users that has install "{0}" package:'.format(args.package))
+                for user in runner.get_owners_of(args.package):
                     print(user)
         sys.exit(ExitCodes.GOOD.value)
     #TODO: Заставиль это работать
@@ -238,6 +236,12 @@ def privileged_main():
         sys.exit(ExitCodes.WANT_TO_DO_SYSTEM_COMPOSING.value)
     except SystemComposingByResolverError:
         sys.exit(ExitCodes.SYSTEM_COMPOSING_BY_RESOLVER.value)
+    except OnlyRootMayForceError:
+        print_error('''Error: only root is able to use "--force" option''')
+        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
+    except YouMayNotPurgeError:
+        print_error('''Error: only root can purge packages and use "--purge-unused" option''')
+        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
     except YouMayNotPurgeError:
         print_error('''Error: only root can purge packages and use "--purge-unused" option''')              
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
@@ -258,14 +262,20 @@ def privileged_main():
     except CoownershipImportSyntaxError:
         print_error('Error while parsing coownership-list')
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES.value)
+    except DpkgJournalDirtyError:
+        print_error('Dpkg was interrupted')
+        if display_modes.wordy():
+            print('''All dpkg operations will fail until this is fixed, the action to fix the system '''
+                  '''if dpkg got interrupted is to run ‘dpkg –configure -a’ as root)''')
+        sys.exit(ExitCodes.DPKG_JOUNAL_DIRTY.value)
     except LockFailedError as err:
         print_error('CANNOT LOCK: ', err)
         sys.exit(ExitCodes.LOCK_FAILED.value)
     except FetchCancelledError as err:
-        print_error('Error: fetch cancelled')              
+        print_error('FETCH CANCELLED: ', err)
         sys.exit(ExitCodes.FETCH_CANCELLED.value)
     except FetchFailedError as err:
-        print_error('Error: fetch cancelled')              
+        print_error('FETCH FAILED: ', err)
         sys.exit(ExitCodes.FETCH_FAILED.value)
     except StubError as err:
         print_error('It is a stub: ', err)
