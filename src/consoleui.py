@@ -178,7 +178,7 @@ class ErrorHandlers(Modded):
               format(self.modes.pkg_str(pkg)))
         
     def may_not_downgrade(self):
-        print('''Error: cannot downgrade packages''')
+        print('''Error: cannot downgrade packages. Only root using "--force" option may do that''')
 
     def force_downgrade(self, pkg):
         if self.modes.wordy():
@@ -186,7 +186,7 @@ class ErrorHandlers(Modded):
                   format(self.modes.pkg_str(pkg), pkg.candidate.version))
         
     def may_not_keep(self):
-        print('''Error: cannot keep packages at their current versions''')
+        print('''Error: cannot keep packages at their current versions. Only root using "--force" option may do that''')
 
     def force_keep(self, pkg):
         if self.modes.wordy():
@@ -216,7 +216,7 @@ class ErrorHandlers(Modded):
         
     def simple_removation(self, pkg):
         if self.modes.verbose:
-            print('''No simple user has installed package "{0}" therefore physical removation '''
+            print('''No simple user have installed package "{0}" therefore physical removation '''
                   '''is equivalent to simple removation in that case'''.format(self.modes.pkg_str(pkg)))
 #TODO: remove it
 #    def simple_markauto(self, pkg):

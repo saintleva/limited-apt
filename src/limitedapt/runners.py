@@ -15,6 +15,9 @@
 #
 '''Logics of limited-apt'''
 
+
+import importlib.util
+from datetime import datetime
 import pwd
 import grp
 import os.path
@@ -29,6 +32,7 @@ from limitedapt.coownership import *
 from limitedapt.enclosure import *
 from limitedapt.tasks import *
 from limitedapt.modes import *
+from limitedapt.updatetime import *
 
 
 DEBUG = True
@@ -99,6 +103,10 @@ class RunnerBase:
         except KeyError:
             raise GroupNotExistError(group_name)
 
+    @property
+    def update_times(self):
+        return self.__update_times
+
     def __check_user_privileges(self):
         self.__has_privileges = self.username == "root" or \
                                 self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
@@ -148,6 +156,15 @@ class UpdationRunner(RunnerBase):
     def fetch_progress(self):
         return self.__fetch_progress
 
+    def __save_update_times(self, update_times):
+        filename = os.path.join(constants.path_to_program_config(), 'updatetimes')
+        self.__debug_message('''saving times of last distro and enclosure updating to file "{0}" ...'''.
+                             format(filename))
+        try:
+            update_times.export_to_xml(filename)
+        except IOError as err:
+            raise WritingConfigFilesError(filename, err.errno)
+
     def update_eclosure(self):
         # TODO: Implement enclosure updating
         filename = os.path.join(constants.path_to_program_config(), 'enclosure')
@@ -161,9 +178,12 @@ class UpdationRunner(RunnerBase):
         if not self.has_privileges:
             raise YouMayNotUpdateError(constants.UNIX_LIMITEDAPT_GROUPNAME)
         cache = get_cache()
+        update_times = UpdateTimes()
         cache.update(self.fetch_progress)
+        update_times.distro = datetime.now()
         cache.open(None)  # TODO: Do I really need to re-open the cache here?
         self.update_eclosure()
+        update_times.enclosure = datetime.now()
 
 
 class PrintRunner(RunnerBase):
@@ -259,6 +279,23 @@ class ModificationRunner(RunnerBase):
             raise YouMayNotPurgeError()
         if self.work_modes.force and self.username != "root":
             raise OnlyRootMayForceError()
+
+    def __load_update_times(self):
+        filename = os.path.join(constants.path_to_program_config(), 'updatetimes')
+        self.__debug_message('''loading times of last distro and enclosure updating from file "{0}" ...'''.
+                             format(filename))
+        try:
+            update_times = UpdateTimes()
+            update_times.import_from_xml(filename)
+            return update_times
+        except IOError as err:
+            raise ReadingConfigFilesError(filename, err.errno)
+
+    def __check_updating(self):
+        update_times = self.__load_update_times()
+        filename = os.path.join(constants.path_to_program_config(), 'updating.py')
+        updating_config_module = importlib.util.spec_from_file_location("updating", filename)
+
 
     # TODO: Do I really need it?
     def __load_program_options(self):
