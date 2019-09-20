@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2015 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -77,7 +77,7 @@ class GroupNotExistError(TerminationError, GroupProblem):
     def __init__(self, group_name):
         GroupProblem.__init__(group_name)
 
-class ConfigFilesIOError(TerminationError):
+class FileIOError(TerminationError):
     
     def __init__(self, filename, error_number):
         self.__filename = filename
@@ -90,14 +90,24 @@ class ConfigFilesIOError(TerminationError):
     @property
     def error_number(self):
         return self.__error_number
-    
-class ReadingConfigFilesError(ConfigFilesIOError):
-    
+
+class VariableFileIOError(FileIOError):
+
     def __init__(self, filename, error_number):
         super().__init__(filename, error_number)
 
-class WritingConfigFilesError(ConfigFilesIOError):
+class ReadingVariableFileError(VariableFileIOError):
 
+    def __init__(self, filename, error_number):
+        super().__init__(filename, error_number)
+
+class WritingVariableFileError(VariableFileIOError):
+
+    def __init__(self, filename, error_number):
+        super().__init__(filename, error_number)
+
+class ReadingConfigFileError(FileIOError):
+    
     def __init__(self, filename, error_number):
         super().__init__(filename, error_number)
 
@@ -106,6 +116,8 @@ class AttempToPerformSystemComposingError(TerminationError): pass
 class WantToDoSystemComposingError(AttempToPerformSystemComposingError): pass
 
 class SystemComposingByResolverError(AttempToPerformSystemComposingError): pass
+
+class DistroHasNotBeenUpdated(TerminationError): pass
 
 class DpkgJournalDirtyError(TerminationError): pass
 

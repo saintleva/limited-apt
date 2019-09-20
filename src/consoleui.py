@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,8 +21,11 @@ import subprocess
 from limitedapt import single
 from limitedapt.constants import *
 from limitedapt.modes import Modded
+from limitedapt.updatetime import UpdateTimes
 from metrics import *
 
+
+PROGRAM_NAME = 'limited-apt'
 
 @single.run_once
 def get_terminal_width():
@@ -39,6 +42,7 @@ class Applying(Modded):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
 
+        cache = single.get_cache()
         changes = cache.get_changes()
             
         def print_onetype_operation_package_list(pkg_predicate, header):
@@ -74,8 +78,10 @@ class Applying(Modded):
                 if line != '  ':
                     print(line)
 
-        print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.is_installed and not pkg.marked_upgrade,
-                                             'These new packages will be logically installed:')
+        logically_installed = lambda pkg: pkg in tasks.install and pkg.is_installed and not pkg.marked_upgrade
+        logically_remove = lambda pkg: pkg in tasks.remove and not pkg.marked_delete
+
+        print_onetype_operation_package_list(logically_installed, 'These new packages will be logically installed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_install,
                                              'These new packages will be physically installed:')
         print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.marked_upgrade and not pkg.marked_install,
@@ -86,16 +92,15 @@ class Applying(Modded):
                                              'These packages will be reinstalled:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_downgrade,
                                              'These packages will be downgraded:')
-        print_onetype_operation_package_list(lambda pkg: pkg in tasks.remove and not pkg.marked_delete,
-                                             'These packages will be logically removed:')
+        print_onetype_operation_package_list(logically_remove, 'These packages will be logically removed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_delete,
                                              'These packages will be physically removed:')
         print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
                                              'These packages will be kept at they current version:')
 
         update_count = sum(1 for pkg in changes if pkg.marked_upgrade)
-        logically_installed_count = sum(1 for pkg in changes if pkg in tasks.install and pkg.is_installed and not pkg.marked_upgrade)
-        logically_remove_count = sum(1 for pkg in changes if pkg in tasks.remove and not pkg.marked_delete)
+        logically_installed_count = sum(1 for pkg in changes if logically_installed(pkg))
+        logically_remove_count = sum(1 for pkg in changes if logically_remove(pkg))
 
         #TODO: Calculate count of "have not been updated"
         print(
@@ -210,14 +215,24 @@ class ErrorHandlers(Modded):
     def force_untrusted(self, pkg):
         print('''Forced by root: package "{0}" will be installed although this is not trusted'''.format(self.modes.pkg_str(pkg)))
 
-    #TODO: remove it
-#    def may_not_force(self):
-#        print('''Error: only root is able to use "--force" option''')
-        
     def simple_removation(self, pkg):
         if self.modes.verbose:
             print('''No simple user have installed package "{0}" therefore physical removation '''
                   '''is equivalent to simple removation in that case'''.format(self.modes.pkg_str(pkg)))
+
+    @staticmethod
+    def __last_update_str(last_update):
+        return "has not ever been updated" if last_update is None else \
+            "was been updated at: " + last_update.strftime(UpdateTimes.FORMAT_STRING)
+
+    def distro_updating_warning(self, last_update):
+        print('''Warning: you should run "{0} update" before in order to update list of available packages, which {1}'''.
+              format(PROGRAM_NAME, ErrorHandlers.__last_update_str(last_update)))
+
+    def enclosure_updating_warning(self, last_update):
+        print('''Warning: you should run "{0} update" before in order to update enclosure, which {1}'''.
+              format(PROGRAM_NAME, ErrorHandlers.__last_update_str(last_update)))
+
 #TODO: remove it
 #    def simple_markauto(self, pkg):
 #        if self.modes.verbose:

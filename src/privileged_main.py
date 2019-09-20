@@ -69,7 +69,6 @@ def privileged_main():
                                      you need to be in a "{0}" group.'.format(UNIX_LIMITEDAPT_GROUPNAME))
 
     # add a common options
-    #TODO: Do I really need this option?
     parser.add_argument('-a', '--show-arch', action='store_true',
                         help='Always show package name in "<name>:<arch>" format (showing architecture)')
     parser.add_argument('-v', '--verbose', action='store_true', help='Display extra information.')
@@ -86,10 +85,7 @@ def privileged_main():
      
     # create the parser for the "print-enclosure" command
     subparsers.add_parser('print-enclosure', help='Print enclosure (the list of non-system packages ordinary user can install).')
-    #TODO: remove it
-#     print_enclosure_parser.add_argument('-r', '--versions', action='store_true',
-#                                         help='''Show version constraints for 'allowed' packages.''')
-        
+
     # create the parser for the "list-of-mine" command
     subparsers.add_parser('list-of-mine',
                           help='Print list of the packages installed (or unmarked auto) by you. Has not subparameters.',
@@ -197,9 +193,9 @@ def privileged_main():
                         add_unsuffixed_operation_to_tasks(operation, tasks)
                 runner.perform_operations(tasks)
         elif args.subcommand == 'update':
-            runner = Runner(user_id, display_modes, None, sys.stderr)
+            runner = UpdationRunner(user_id, display_modes, None, sys.stderr)
             runner.update()
-        elif args.subcommand in ['print-enclosure', 'list-of-mine', 'owners-of']:
+        elif args.subcommand in ('print-enclosure', 'list-of-mine', 'owners-of'):
             runner = PrintRunner(user_id, display_modes, sys.stderr)
             if args.subcommand == 'print-enclosure':
                 if display_modes.wordy():
@@ -242,31 +238,31 @@ def privileged_main():
     except YouMayNotPurgeError:
         print_error('''Error: only root can purge packages and use "--purge-unused" option''')
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
-    except YouMayNotPurgeError:
-        print_error('''Error: only root can purge packages and use "--purge-unused" option''')              
-        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
     except GroupNotExistError as err:
         print_error('''Error: "{0}" group doesn't exist'''.format(err.group_name))
         sys.exit(ExitCodes.GROUP_NOT_EXIST.value)
-    except ReadingConfigFilesError as err:
-        print_error('''Error number "{0}" appeared while reading config file "{1}"'''.
-                    format(err.error_number, err.filename))
-        sys.exit(ExitCodes.ERROR_WHILE_READING_CONFIG_FILES.value)
-    except WritingConfigFilesError as err:
-        print_error('''Error number "{0}" appeared while reading config file "{1}"'''.
-                    format(err.error_number, err.filename))
-        sys.exit(ExitCodes.ERROR_WHILE_WRITING_CONFIG_FILES.value)
+    except ReadingVariableFileError as err:
+        print_error('''Error number "{0}" appeared while reading file "{1}"'''.format(err.error_number, err.filename))
+        sys.exit(ExitCodes.ERROR_WHILE_READING_VARIABLE_FILE.value)
+    except WritingVariableFileError as err:
+        print_error('''Error number "{0}" appeared while writing to file "{1}"'''.format(err.error_number, err.filename))
+        sys.exit(ExitCodes.ERROR_WHILE_WRITING_VARIABLE_FILE.value)
     except EnclosureImportSyntaxError:
         print_error('Error while parsing enclosure')
-        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES.value)
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_VARIABLE_FILE.value)
     except CoownershipImportSyntaxError:
         print_error('Error while parsing coownership-list')
-        sys.exit(ExitCodes.ERROR_WHILE_PARSING_CONFIG_FILES.value)
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_VARIABLE_FILE.value)
+    except DistroHasNotBeenUpdated:
+        print_error('''Error: You must update list of available packages running '{0} update' command'''.format(PROGRAM_NAME))
+        if display_modes.wordy():
+            print('''Only root can avoid this using "--force" option''')
+        sys.exit(ExitCodes.DISTRO_HAS_NOT_BEEN_UPDATED.value)
     except DpkgJournalDirtyError:
-        print_error('Dpkg was interrupted')
+        print_error('Error: Dpkg has been interrupted')
         if display_modes.wordy():
             print('''All dpkg operations will fail until this is fixed, the action to fix the system '''
-                  '''if dpkg got interrupted is to run ‘dpkg –configure -a’ as root)''')
+                  '''if dpkg got interrupted is to run ‘dpkg –configure -a’ as root''')
         sys.exit(ExitCodes.DPKG_JOUNAL_DIRTY.value)
     except LockFailedError as err:
         print_error('CANNOT LOCK: ', err)

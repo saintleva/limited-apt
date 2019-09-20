@@ -1,4 +1,4 @@
-# Copyright (C) Anton Liaukevich 2011-2015 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -174,33 +174,29 @@ class Enclosure:
             root = etree.parse(file).getroot()
             self.clear()
             for package_element in root.findall("package"):
-                try:
-                    everyarch_element = package_element.find("everyarch")
-                    if everyarch_element is not None:
-                        arch_and_versions = ArchAndVersions(isevery=True)
-                        everyversion_element = everyarch_element.find("everyversion")
+                everyarch_element = package_element.find("everyarch")
+                if everyarch_element is not None:
+                    arch_and_versions = ArchAndVersions(isevery=True)
+                    everyversion_element = everyarch_element.find("everyversion")
+                    if everyversion_element is not None:
+                        arch_and_versions.every = Versions(isevery=True )
+                    else:
+                        versions = Versions()
+                        for version_element in everyarch_element.findall("version"):
+                            versions.add(version_element.get("number"))
+                        arch_and_versions.add(versions)
+                else:
+                    arch_and_versions = ArchAndVersions()
+                    for arch_element in package_element.findall("arch"):
+                        everyversion_element = arch_element.find("everyversion")
                         if everyversion_element is not None:
-                            arch_and_versions.every = Versions(isevery=True )
+                            arch_and_versions.add(Versions(isevery=True), arch_element.get("name"))
                         else:
                             versions = Versions()
-                            for version_element in everyarch_element.findall("version"):
-                                versions.add(version_element.get("number"))                                 
-                            arch_and_versions.add(versions)
-                    else:
-                        arch_and_versions = ArchAndVersions()
-                        for arch_element in package_element.findall("arch"):
-                            everyversion_element = arch_element.find("everyversion")
-                            if everyversion_element is not None:
-                                arch_and_versions.add(Versions(isevery=True), arch_element.get("name"))
-                            else:
-                                versions = Versions()
-                                for version_element in arch_element.findall("version"): 
-                                    versions.add(version_element.get("number"))
-                                arch_and_versions.add(versions, arch_element.get("name"))
-                    self.add_package(package_element.get("name"), arch_and_versions)
-                except (ValueError, LookupError) as err:
-                    raise EnclosureImportSyntaxError("Syntax error has been appeared during importing "
-                                                     "enclosure structure from xml: " + str(err))
-        except etree.XMLSyntaxError as err:
+                            for version_element in arch_element.findall("version"):
+                                versions.add(version_element.get("number"))
+                            arch_and_versions.add(versions, arch_element.get("name"))
+                self.add_package(package_element.get("name"), arch_and_versions)
+        except (ValueError, LookupError, etree.XMLSyntaxError) as err:
             raise EnclosureImportSyntaxError('''Syntax error has been appeared during importing 
                                              enclosure structure from xml: ''' + str(err))

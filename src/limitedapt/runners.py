@@ -1,4 +1,4 @@
-# Copyright (C) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -115,7 +115,7 @@ class RunnerBase:
                              format(self.username, self.has_privileges)
 
     def __load_coownership_list(self):
-        filename = os.path.join(constants.path_to_program_config(), 'coownership-list')
+        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'coownership-list')
         self.__debug_message('''loading list of package coownership (by users) from file "{0}" ...'''.
                              format(filename))
         try:
@@ -123,19 +123,19 @@ class RunnerBase:
             coownership_list.import_from_xml(filename)
             return coownership_list
         except IOError as err:
-            raise ReadingConfigFilesError(filename, err.errno)
+            raise ReadingVariableFileError(filename, err.errno)
 
     def __save_coownership_list(self, coownership_list):
-        filename = os.path.join(constants.path_to_program_config(), 'coownership-list')
+        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'coownership-list')
         self.__debug_message('''saving list of package coownership (by users) to file "{0}" ...'''.
                              format(filename))
         try:
             coownership_list.export_to_xml(filename)
         except IOError as err:
-            raise WritingConfigFilesError(filename, err.errno)
+            raise WritingVariableFileError(filename, err.errno)
 
     def __load_enclosure(self):
-        filename = os.path.join(constants.path_to_program_config(), 'enclosure')
+        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'enclosure')
         self.__debug_message('''loading non-system package set (enclosure) from file "{0}" ...'''.
                              format(filename))
         try:
@@ -143,13 +143,15 @@ class RunnerBase:
             enclosure.import_from_xml(filename)
             return enclosure
         except IOError as err:
-            raise ReadingConfigFilesError(filename, err.errno)
+            raise ReadingVariableFileError(filename, err.errno)
 
 
 class UpdationRunner(RunnerBase):
 
     def __init__(self, user_id, display_modes, fetch_progress, debug_stream):
         super().init(user_id, display_modes, debug_stream)
+        if not self.has_privileges:
+            raise YouMayNotUpdateError(constants.UNIX_LIMITEDAPT_GROUPNAME)
         self.__fetch_progress = fetch_progress
 
     @property
@@ -157,17 +159,17 @@ class UpdationRunner(RunnerBase):
         return self.__fetch_progress
 
     def __save_update_times(self, update_times):
-        filename = os.path.join(constants.path_to_program_config(), 'updatetimes')
+        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'updatetimes')
         self.__debug_message('''saving times of last distro and enclosure updating to file "{0}" ...'''.
                              format(filename))
         try:
             update_times.export_to_xml(filename)
         except IOError as err:
-            raise WritingConfigFilesError(filename, err.errno)
+            raise WritingVariableFileError(filename, err.errno)
 
     def update_eclosure(self):
         # TODO: Implement enclosure updating
-        filename = os.path.join(constants.path_to_program_config(), 'enclosure')
+        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'enclosure')
         if DEBUG:
             self.__debug_message('''updating enclosure in the file "{0}" ...'''.format(filename))
             debug.update_enclosure_by_debtags(filename)
@@ -175,15 +177,14 @@ class UpdationRunner(RunnerBase):
             raise StubError('Real enclosure updating has not implemented yet')
 
     def update(self):
-        if not self.has_privileges:
-            raise YouMayNotUpdateError(constants.UNIX_LIMITEDAPT_GROUPNAME)
         cache = get_cache()
         update_times = UpdateTimes()
         cache.update(self.fetch_progress)
         update_times.distro = datetime.now()
-        cache.open(None)  # TODO: Do I really need to re-open the cache here?
-        self.update_eclosure()
+        cache.open(None)  #TODO: Do I really need to re-open the cache here?
+        self.update_eclosure() #TODO: Do I need to use 'try' block?
         update_times.enclosure = datetime.now()
+        self.__save_update_times(update_times)
 
 
 class PrintRunner(RunnerBase):
@@ -243,6 +244,7 @@ class ModificationRunner(RunnerBase):
         self.__applying_ui = applying_ui
         self.__applying_ui.modes = display_modes
         self.__progresses = progresses
+        self.__check_updating()
 
     @property
     def work_modes(self):
@@ -281,7 +283,7 @@ class ModificationRunner(RunnerBase):
             raise OnlyRootMayForceError()
 
     def __load_update_times(self):
-        filename = os.path.join(constants.path_to_program_config(), 'updatetimes')
+        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'updatetimes')
         self.__debug_message('''loading times of last distro and enclosure updating from file "{0}" ...'''.
                              format(filename))
         try:
@@ -289,13 +291,21 @@ class ModificationRunner(RunnerBase):
             update_times.import_from_xml(filename)
             return update_times
         except IOError as err:
-            raise ReadingConfigFilesError(filename, err.errno)
+            raise ReadingVariableFileError(filename, err.errno)
 
     def __check_updating(self):
         update_times = self.__load_update_times()
-        filename = os.path.join(constants.path_to_program_config(), 'updating.py')
-        updating_config_module = importlib.util.spec_from_file_location("updating", filename)
-
+        filename = os.path.join(constants.PATH_TO_PROGRAM_CONFIG, 'updating.py')
+        spec = importlib.util.spec_from_file_location("updating", filename)
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        if module.is_distro_update_needed(update_times.effective_distro()):
+            if self.username == "root" and self.work_modes.force:
+                self.work_modes.distro_updating_warning(update_times.effective_distro())
+            else:
+                raise DistroHasNotBeenUpdated()
+        if module.is_enclosure_update_needed(update_times.enclosure):
+            self.work_modes.enclosure_updating_warning(update_times.enclosure)
 
     # TODO: Do I really need it?
     def __load_program_options(self):
@@ -395,16 +405,15 @@ class ModificationRunner(RunnerBase):
     def upgrade(self, full_upgrade=True):
         if not self.has_privileges:
             raise YouMayNotUpgradeError(constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME, full_upgrade)
-        cache = get_cache()
         enclosure = self.__load_enclosure()
-        cache.upgrade(full_upgrade)
+        get_cache().upgrade(full_upgrade)
         self.__examine_and_apply_changes(Tasks(), enclosure, coownership=None, is_upgrading=True)
 
     def perform_operations(self, tasks):
         if not self.has_privileges:
             raise YouMayNotPerformError(constants.UNIX_LIMITEDAPT_GROUPNAME)
 
-        cache = apt.Cache()
+        cache = get_cache()
         coownership = self.__load_coownership_list()
         enclosure = self.__load_enclosure()
 

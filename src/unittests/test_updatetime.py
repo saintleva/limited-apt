@@ -1,5 +1,6 @@
+#!/usr/bin/env python3
 #
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,18 +16,19 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import unittest
+from datetime import *
+from limitedapt.updatetime import *
 
-UNIX_LIMITEDAPT_GROUPNAME = 'limited-apt'
-UNIX_LIMITEDAPT_ROOTS_GROUPNAME = 'limited-apt-roots'
-UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME = 'limited-apt-upgraders'
+class UpdateTimeTestCase1(unittest.TestCase):
 
-PATH_TO_PROGRAM_VARIABLE="/var/lib/limited-apt/"
+    def setUp(self):
+        self.__update_times = UpdateTimes()
+        self.__update_times.distro = datetime.now()
 
-PACKED_IN_DEB = False
+    def test_not_now(self):
+        self.assertNotEquals(self.__update_times.distro, datetime.now())
 
-if PACKED_IN_DEB:
-    PATH_TO_PROGRAM_CONFIG = "/etc/limited-apt/"
-else:
-    PATH_TO_PROGRAM_CONFIG = "/usr/local/etc/limited-apt/"
 
-#ENCLOSURE_BY_DEBTAGS_DEBUG = True
+if __name__ == "__main__":
+    unittest.main(verbosity=2)

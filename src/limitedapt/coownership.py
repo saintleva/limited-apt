@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2015 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -102,13 +102,6 @@ class CoownershipList:
         self.__data.clear()
         
     def export_to_xml(self, file):
-        #TODO: remove it
-#        for package, owners in sorted(self.__data.items(), key=lambda x: x[0]):
-#            print(package)
-#            for user in sorted(owners):
-#                print("  " + user)
-#        print()
-        
         root = etree.Element("packages")
         for package, owners in sorted(self.__data.items(), key=lambda x: x[0]):
             package_element = etree.SubElement(root, "package", name=package.name, arch=package.architecture)
@@ -122,15 +115,11 @@ class CoownershipList:
             root = etree.parse(file).getroot()
             self.clear()
             for package_element in root.findall("package"):
-                try:                    
-                    package = ConcretePackage(package_element.get("name"), package_element.get("arch"))
-                    owners = set()
-                    for user_element in package_element.findall("user"):
-                        owners.add(user_element.get("name"))                        
-                    self.__data[package] = owners
-                except (ValueError, LookupError) as err:
-                    raise CoownershipImportSyntaxError("Syntax error has been appeared during importing "
-                                                       "coownership table from xml: " + str(err))
-        except etree.XMLSyntaxError as err:
+                package = ConcretePackage(package_element.get("name"), package_element.get("arch"))
+                owners = set()
+                for user_element in package_element.findall("user"):
+                    owners.add(user_element.get("name"))
+                self.__data[package] = owners
+        except (ValueError, LookupError, etree.XMLSyntaxError) as err:
             raise CoownershipImportSyntaxError('''Syntax error has been appeared during importing
                                                coownership table from xml: ''' + str(err))
