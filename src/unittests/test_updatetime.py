@@ -20,14 +20,17 @@ import unittest
 from datetime import *
 from limitedapt.updatetime import *
 
+
 class UpdateTimeTestCase1(unittest.TestCase):
 
     def setUp(self):
         self.__update_times = UpdateTimes()
-        self.__update_times.distro = datetime.now()
+        self.__update_times.import_from_xml("data/updatetimes1")
 
-    def test_not_now(self):
-        self.assertNotEquals(self.__update_times.distro, datetime.now())
+    def test_1(self):
+        self.assertEqual(self.__update_times.distro, datetime(2019, 9, 23, 16, 24, 43, 902572))
+        self.assertNotEqual(self.__update_times.enclosure, datetime(2019, 9, 23, 16, 24, 43, 902572))
+        self.assertIsNone(self.__update_times.enclosure)
 
 
 if __name__ == "__main__":

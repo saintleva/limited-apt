@@ -88,15 +88,15 @@ class CoownershipEditTestCase(unittest.TestCase):
         with self.assertRaises(UserDoesNotOwnPackage):
             self.__coownership.remove_ownership(ConcretePackage("3dchess", "amd64"), "anthony")
         self.__coownership.remove_ownership(ConcretePackage("3dchess", "amd64"), "root2")
-        
         self.assertFalse(self.__coownership.is_own(ConcretePackage("3dchess", "amd64"), "root2"))
         
-    def test_remove_package(self):
+    def test_remove_package(self ):
         with self.assertRaises(PackageIsNotInstalled):
             self.__coownership.remove_ownership(ConcretePackage("not-a-package", "not-an-arch"), "anthony")
         self.__coownership.remove_package(ConcretePackage("extremetuxracer", "amd64"))
         owners = self.__coownership.owners_of(ConcretePackage("extremetuxracer", "amd64"))
         self.assertSetEqual(owners, set())
-        
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

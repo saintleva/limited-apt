@@ -69,11 +69,11 @@ class RunnerBase:
                 return "root"
             name = pwd.getpwuid(user_id).pw_name
             return "root" if name == "root" or \
-                             self.__is_belong_to_group(name, constants.UNIX_LIMITEDAPT_ROOTS_GROUPNAME) \
+                             self._is_belong_to_group(name, constants.UNIX_LIMITEDAPT_ROOTS_GROUPNAME) \
                 else name
 
         self.__username = effective_username(user_id)
-        self.__check_user_privileges()
+        self._check_user_privileges()
 
     @property
     def display_modes(self):
@@ -91,12 +91,12 @@ class RunnerBase:
     def has_privileges(self):
         return self.__has_privileges
 
-    def __debug_message(self, message):
+    def _debug_message(self, message):
         if self.display_modes.debug:
             print('Debug message: {0}'.format(message))
 
     @staticmethod
-    def __is_belong_to_group(user_name, group_name):
+    def _is_belong_to_group(user_name, group_name):
         try:
             group = grp.getgrnam(group_name)
             return user_name in group.gr_mem
@@ -107,17 +107,17 @@ class RunnerBase:
     def update_times(self):
         return self.__update_times
 
-    def __check_user_privileges(self):
+    def _check_user_privileges(self):
         self.__has_privileges = self.username == "root" or \
-                                self.__is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
-        self.__debug_message('''your username is: "{0}"''' \
-                             '''you has privileges for modification operations: "{1}"'''.
-                             format(self.username, self.has_privileges)
+                                self._is_belong_to_group(self.username, constants.UNIX_LIMITEDAPT_GROUPNAME)
+        self._debug_message('''your username is: "{0}"\n''' \
+                            '''you has privileges for modification operations: "{1}"'''.
+                            format(self.username, self.has_privileges))
 
-    def __load_coownership_list(self):
+    def _load_coownership_list(self):
         filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'coownership-list')
-        self.__debug_message('''loading list of package coownership (by users) from file "{0}" ...'''.
-                             format(filename))
+        self._debug_message('''loading list of package coownership (by users) from file "{0}" ...'''.
+                            format(filename))
         try:
             coownership_list = CoownershipList()
             coownership_list.import_from_xml(filename)
@@ -125,19 +125,19 @@ class RunnerBase:
         except IOError as err:
             raise ReadingVariableFileError(filename, err.errno)
 
-    def __save_coownership_list(self, coownership_list):
+    def _save_coownership_list(self, coownership_list):
         filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'coownership-list')
-        self.__debug_message('''saving list of package coownership (by users) to file "{0}" ...'''.
-                             format(filename))
+        self._debug_message('''saving list of package coownership (by users) to file "{0}" ...'''.
+                            format(filename))
         try:
             coownership_list.export_to_xml(filename)
         except IOError as err:
             raise WritingVariableFileError(filename, err.errno)
 
-    def __load_enclosure(self):
+    def _load_enclosure(self):
         filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'enclosure')
-        self.__debug_message('''loading non-system package set (enclosure) from file "{0}" ...'''.
-                             format(filename))
+        self._debug_message('''loading non-system package set (enclosure) from file "{0}" ...'''.
+                            format(filename))
         try:
             enclosure = Enclosure()
             enclosure.import_from_xml(filename)
@@ -149,7 +149,7 @@ class RunnerBase:
 class UpdationRunner(RunnerBase):
 
     def __init__(self, user_id, display_modes, fetch_progress, debug_stream):
-        super().init(user_id, display_modes, debug_stream)
+        super().__init__(user_id, display_modes, debug_stream)
         if not self.has_privileges:
             raise YouMayNotUpdateError(constants.UNIX_LIMITEDAPT_GROUPNAME)
         self.__fetch_progress = fetch_progress
@@ -160,8 +160,8 @@ class UpdationRunner(RunnerBase):
 
     def __save_update_times(self, update_times):
         filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'updatetimes')
-        self.__debug_message('''saving times of last distro and enclosure updating to file "{0}" ...'''.
-                             format(filename))
+        self._debug_message('''saving times of last distro and enclosure updating to file "{0}" ...'''.
+                            format(filename))
         try:
             update_times.export_to_xml(filename)
         except IOError as err:
@@ -171,7 +171,7 @@ class UpdationRunner(RunnerBase):
         # TODO: Implement enclosure updating
         filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'enclosure')
         if DEBUG:
-            self.__debug_message('''updating enclosure in the file "{0}" ...'''.format(filename))
+            self._debug_message('''updating enclosure in the file "{0}" ...'''.format(filename))
             debug.update_enclosure_by_debtags(filename)
         else:
             raise StubError('Real enclosure updating has not implemented yet')
@@ -190,10 +190,10 @@ class UpdationRunner(RunnerBase):
 class PrintRunner(RunnerBase):
 
     def __init__(self, user_id, display_modes, debug_stream):
-        super().init(user_id, display_modes, debug_stream)
+        super().__init__(user_id, display_modes, debug_stream)
 
     def get_list_of_mine(self):
-        coownership_list = self.__load_coownership_list()
+        coownership_list = self._load_coownership_list()
         cache = get_cache()
 
         def is_root_own_package(concrete_package):
@@ -215,7 +215,7 @@ class PrintRunner(RunnerBase):
             cache = get_cache()
             pkg = cache[package_name]
             package = ConcretePackage(pkg.name, pkg.candidate.architecture)
-            coownership_list = self.__load_coownership_list()
+            coownership_list = self._load_coownership_list()
             users = coownership_list.owners_of(package)
             if users:
                 return users
@@ -225,7 +225,7 @@ class PrintRunner(RunnerBase):
             return set()
 
     def get_printed_enclosure(self):
-        enclosure = self.__load_enclosure()
+        enclosure = self._load_enclosure()
         # We don't need to sort packages because iterator of "Cache" class already returns
         # sorted sequence
         return (self.display_modes.pkg_str(pkg) for pkg in get_cache() if pkg.candidate is not None and
@@ -237,8 +237,8 @@ class ModificationRunner(RunnerBase):
     def __init__(self, user_id, display_modes, work_modes, handlers, applying_ui, progresses, debug_stream):
         if get_cache().dpkg_journal_dirty:
             raise DpkgJournalDirtyError()
-        super().__init__(user_id, display_modes, debug_stream)
         self.__work_modes = work_modes
+        super().__init__(user_id, display_modes, debug_stream)
         self.__handlers = handlers
         self.__handlers.modes = display_modes
         self.__applying_ui = applying_ui
@@ -270,13 +270,13 @@ class ModificationRunner(RunnerBase):
     def default_release(self):
         return self.__default_release
 
-    def __check_user_privileges(self):
-        super().__check_user_privileges()
+    def _check_user_privileges(self):
+        super()._check_user_privileges()
         self.__may_upgrade_package = self.username == "root" or \
-                                     self.__is_belong_to_group(self.username,
-                                                               constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME)
-        self.__debug_message('''you may upgrade installed packages even they are system-constitutive: "{0}"'''.
-                             format(self.may_upgrade_package))
+                                     self._is_belong_to_group(self.username,
+                                                              constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME)
+        self._debug_message('''you may upgrade installed packages even they are system-constitutive: "{0}"'''.
+                            format(self.may_upgrade_package))
         if self.work_modes.purge_unused and self.username != "root":
             raise YouMayNotPurgeError()
         if self.work_modes.force and self.username != "root":
@@ -284,8 +284,8 @@ class ModificationRunner(RunnerBase):
 
     def __load_update_times(self):
         filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'updatetimes')
-        self.__debug_message('''loading times of last distro and enclosure updating from file "{0}" ...'''.
-                             format(filename))
+        self._debug_message('''loading times of last distro and enclosure updating from file "{0}" ...'''.
+                            format(filename))
         try:
             update_times = UpdateTimes()
             update_times.import_from_xml(filename)
@@ -301,11 +301,11 @@ class ModificationRunner(RunnerBase):
         spec.loader.exec_module(module)
         if module.is_distro_update_needed(update_times.effective_distro()):
             if self.username == "root" and self.work_modes.force:
-                self.work_modes.distro_updating_warning(update_times.effective_distro())
+                self.handlers.distro_updating_warning(update_times.effective_distro())
             else:
-                raise DistroHasNotBeenUpdated()
+                raise DistroHasNotBeenUpdated(update_times.effective_distro())
         if module.is_enclosure_update_needed(update_times.enclosure):
-            self.work_modes.enclosure_updating_warning(update_times.enclosure)
+            self.handlers.enclosure_updating_warning(update_times.enclosure)
 
     # TODO: Do I really need it?
     def __load_program_options(self):
@@ -339,7 +339,8 @@ class ModificationRunner(RunnerBase):
                     self.handlers.may_not_install(pkg)
                     check_fatal()
                 if pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
-                    self.handlers.may_not_upgrade_to_new(pkg)
+                    installed_version = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.installed)
+                    self.handlers.may_not_upgrade_to_new(pkg, installed_version not in enclosure)
                     check_fatal()
                 if pkg.marked_downgrade and not self.work_modes.force:
                     if self.work_modes.force:
@@ -405,7 +406,7 @@ class ModificationRunner(RunnerBase):
     def upgrade(self, full_upgrade=True):
         if not self.has_privileges:
             raise YouMayNotUpgradeError(constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME, full_upgrade)
-        enclosure = self.__load_enclosure()
+        enclosure = self._load_enclosure()
         get_cache().upgrade(full_upgrade)
         self.__examine_and_apply_changes(Tasks(), enclosure, coownership=None, is_upgrading=True)
 
@@ -414,8 +415,8 @@ class ModificationRunner(RunnerBase):
             raise YouMayNotPerformError(constants.UNIX_LIMITEDAPT_GROUPNAME)
 
         cache = get_cache()
-        coownership = self.__load_coownership_list()
-        enclosure = self.__load_enclosure()
+        coownership = self._load_coownership_list()
+        enclosure = self._load_enclosure()
 
         def list_to_str(items):
             result = ""
@@ -428,17 +429,17 @@ class ModificationRunner(RunnerBase):
             return result
 
         if tasks.install:
-            self.__debug_message("You want to install: " + list_to_str(tasks.install))
+            self._debug_message("You want to install: " + list_to_str(tasks.install))
         if tasks.remove:
-            self.__debug_message("you want to remove: " + list_to_str(tasks.remove))
+            self._debug_message("you want to remove: " + list_to_str(tasks.remove))
         if tasks.physically_remove:
-            self.__debug_message("you want to physically remove: " + list_to_str(tasks.physically_remove))
+            self._debug_message("you want to physically remove: " + list_to_str(tasks.physically_remove))
         if tasks.purge:
-            self.__debug_message("you want to purge: " + list_to_str(tasks.purge))
+            self._debug_message("you want to purge: " + list_to_str(tasks.purge))
         if tasks.markauto:
-            self.__debug_message("you want to markauto: " + list_to_str(tasks.markauto))
+            self._debug_message("you want to markauto: " + list_to_str(tasks.markauto))
         if tasks.unmarkauto:
-            self.__debug_message("you want to unmarkauto: " + list_to_str(tasks.unmarkauto))
+            self._debug_message("you want to unmarkauto: " + list_to_str(tasks.unmarkauto))
 
         errors = False
 
@@ -541,7 +542,7 @@ class ModificationRunner(RunnerBase):
                             self.handlers.simple_removation(pkg)
                         finally:
                             pkg.mark_delete(purge=True)
-                else:
+                elif not pkg.has_config_files:
                     self.handlers.is_not_installed(pkg, "purge")
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
@@ -587,4 +588,4 @@ class ModificationRunner(RunnerBase):
 
         self.__examine_and_apply_changes(tasks, enclosure, coownership)
         if not self.work_modes.simulate:
-            self.__save_coownership_list(coownership)
+            self._save_coownership_list(coownership)

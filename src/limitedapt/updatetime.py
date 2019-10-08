@@ -26,8 +26,6 @@ class UpdateTimesImportSyntaxError(XmlImportSyntaxError): pass
 
 class UpdateTimes:
 
-    FORMAT_STRING = "%Y-%m-%d %H:%M:%S"
-
     def __init__(self):
         self.__distro = None
         self.__enclosure = None
@@ -42,7 +40,8 @@ class UpdateTimes:
 
     def effective_distro(self):
         try:
-            file_time = os.path.getmtime("/var/cache/apt/pkgcache.bin")
+            # TODO: Do I need use UTC?
+            file_time = datetime.utcfromtimestamp(os.path.getmtime("/var/cache/apt/pkgcache.bin"))
         except:
             file_time = None
         if self.distro is None:
@@ -62,7 +61,7 @@ class UpdateTimes:
     def export_to_xml(self, file):
 
         def time_to_str(time):
-            return time.strftime(UpdateTimes.FORMAT_STRING) if time is not None else "never"
+            return time.isoformat(sep=" ") if time is not None else "never"
 
         root = etree.Element("updatetime")
         etree.SubElement(root, "distro", time=time_to_str(self.distro))
@@ -73,14 +72,14 @@ class UpdateTimes:
     def import_from_xml(self, file):
 
         def str_to_time(string):
-            return None if string == "never" else datetime.strptime(string, UpdateTimes.FORMAT_STRING)
+            return None if string == "never" else datetime.fromisoformat(string)
 
         try:
             root = etree.parse(file).getroot()
             distro_element = root.find("distro")
             self.distro = str_to_time(distro_element.get("time"))
             enclosure_element = root.find("enclosure")
-            self.distro = str_to_time(enclosure_element.get("time"))
+            self.enclosure = str_to_time(enclosure_element.get("time"))
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:
             raise UpdateTimesImportSyntaxError("Syntax error has been appeared during importing"
                                                "last time of updating from xml: " + str(err))

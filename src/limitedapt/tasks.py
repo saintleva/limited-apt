@@ -44,6 +44,22 @@ class OnetypeConcretePkgTasks:
         #print("YO!")
         return ConcretePackage(pkg.name, pkg.candidate.architecture) in self.__container
 
+    #TODO: remove it
+    def __str__(self):
+
+        def list_to_str(items):
+            result = ""
+            is_first = True
+            for item in items:
+                if not is_first:
+                    result += ", "
+                result += str(item)
+                is_first = False
+            return result
+
+        for package in self.__container:
+            return str(package) + ", "
+
 
 class ConcretePkgTasks:
 

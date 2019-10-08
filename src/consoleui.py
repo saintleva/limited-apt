@@ -78,6 +78,16 @@ class Applying(Modded):
                 if line != '  ':
                     print(line)
 
+#TODO: remove it
+#        print()
+#        print(tasks.install)
+#        print(tasks.remove)
+#        print(tasks.physically_remove)
+#        print(tasks.purge)
+#        print(tasks.markauto)
+#        print(tasks.unmarkauto)
+#        print()
+
         logically_installed = lambda pkg: pkg in tasks.install and pkg.is_installed and not pkg.marked_upgrade
         logically_remove = lambda pkg: pkg in tasks.remove and not pkg.marked_delete
 
@@ -98,7 +108,8 @@ class Applying(Modded):
         print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
                                              'These packages will be kept at they current version:')
 
-        update_count = sum(1 for pkg in changes if pkg.marked_upgrade)
+        install_count = sum(1 for pkg in changes if pkg.marked_install)
+        update_count = sum(1 for pkg in changes if pkg.marked_upgrade and not pkg.marked_install)
         logically_installed_count = sum(1 for pkg in changes if logically_installed(pkg))
         logically_remove_count = sum(1 for pkg in changes if logically_remove(pkg))
 
@@ -106,7 +117,7 @@ class Applying(Modded):
         print(
             '''{0} packages will be updated, {1} new will be logically installed, {2} new will be physically installed, ''' \
             '''{3} marked for logical deletion, {4} marked for physically deletion.'''
-                .format(update_count, logically_installed_count, cache.install_count, logically_remove_count, cache.delete_count))
+                .format(update_count, logically_installed_count, install_count, logically_remove_count, cache.delete_count))
         print('''Required to download {0} archives. '''.format(pretty_size_str(cache.required_download)), end='')
         if cache.required_space >= 0:
             print('''{0} will be occupied after unpacking.'''.format(pretty_size_str(cache.required_space)))
@@ -152,9 +163,10 @@ class ErrorHandlers(Modded):
             print('''Error: package "{0}" which you {1} is system-constitutive and nobody '''
                   '''but root may install it'''.format(name, purpose))
         
-    def may_not_upgrade_to_new(self, pkg):
+    def may_not_upgrade_to_new(self, pkg, installed_version_also):
+        what = "package" if installed_version_also else "this new version"
         print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
-              '''this new version is system-constitutive'''.format(self.modes.pkg_str(pkg), pkg.candidate.version))
+              '''{2} is system-constitutive'''.format(self.modes.pkg_str(pkg), pkg.candidate.version, what))
         
     def is_not_installed(self, pkg, why_must_be):
         action_dict = {"remove" : 'remove',
@@ -209,7 +221,7 @@ class ErrorHandlers(Modded):
     def may_not_install_from_this_archive(self, archive):
         print('''Error: you have not permissions to install packages from "{0}" archive (suite)'''.format(archive))
 
-    def package_is_not_trusted(self, pkg)
+    def package_is_not_trusted(self, pkg):
         print('''Error: package "{0}" is not trusted".'''.format(self.modes.pkg_str(pkg)))
 
     def force_untrusted(self, pkg):
@@ -222,8 +234,8 @@ class ErrorHandlers(Modded):
 
     @staticmethod
     def __last_update_str(last_update):
-        return "has not ever been updated" if last_update is None else \
-            "was been updated at: " + last_update.strftime(UpdateTimes.FORMAT_STRING)
+        return "has not ever been updated" if last_update is None else "was been updated at: " + \
+                                                                       last_update.isoformat(sep=" ", timespec="seconds")
 
     def distro_updating_warning(self, last_update):
         print('''Warning: you should run "{0} update" before in order to update list of available packages, which {1}'''.

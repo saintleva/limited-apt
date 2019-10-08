@@ -27,6 +27,7 @@ import apt.progress.base
 import apt.progress.text
 from limitedapt.tasks import *
 from limitedapt.errors import *
+from limitedapt.updatetime import *
 from limitedapt.runners import *
 from limitedapt.constants import *
 from limitedapt.debug import debug_suidbit
@@ -253,8 +254,11 @@ def privileged_main():
     except CoownershipImportSyntaxError:
         print_error('Error while parsing coownership-list')
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_VARIABLE_FILE.value)
-    except DistroHasNotBeenUpdated:
-        print_error('''Error: You must update list of available packages running '{0} update' command'''.format(PROGRAM_NAME))
+    except DistroHasNotBeenUpdated as err:
+        last_update_str = "It has never been update" if err.time is None \
+            else "It was been updated at {0}".format(err.time.isoformat(sep=" ", timespec="seconds"))
+        print_error('''Error: You must update list of available packages running '{0} update' command. {1}'''.
+                    format(PROGRAM_NAME, last_update_str))
         if display_modes.wordy():
             print('''Only root can avoid this using "--force" option''')
         sys.exit(ExitCodes.DISTRO_HAS_NOT_BEEN_UPDATED.value)
@@ -273,6 +277,9 @@ def privileged_main():
     except FetchFailedError as err:
         print_error('FETCH FAILED: ', err)
         sys.exit(ExitCodes.FETCH_FAILED.value)
+    except apt_pkg.Error as err:
+        print_error('UNKNOWN ERROR: ', err)
+        sys.exit(ExitCodes.UNKNOWN_ERROR.value)
     except StubError as err:
         print_error('It is a stub: ', err)
         sys.exit(ExitCodes.STUB.value)

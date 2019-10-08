@@ -117,7 +117,14 @@ class WantToDoSystemComposingError(AttempToPerformSystemComposingError): pass
 
 class SystemComposingByResolverError(AttempToPerformSystemComposingError): pass
 
-class DistroHasNotBeenUpdated(TerminationError): pass
+class DistroHasNotBeenUpdated(TerminationError):
+
+    def __init__(self, time):
+        self.__time = time
+
+    @property
+    def time(self):
+        return self.__time
 
 class DpkgJournalDirtyError(TerminationError): pass
 
