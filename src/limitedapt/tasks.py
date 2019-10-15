@@ -37,12 +37,12 @@ class OnetypeConcretePkgTasks:
         self.__container = set()
         for task in onetype_tasks:
             pkg = cache[task]
-            self.__container.add(ConcretePackage(pkg.name, pkg.candidate.architecture))
+            self.__container.add(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
 
     def __contains__(self, pkg):
         #TODO: debug and remove it:
         #print("YO!")
-        return ConcretePackage(pkg.name, pkg.candidate.architecture) in self.__container
+        return ConcretePackage(pkg.shortname, pkg.candidate.architecture) in self.__container
 
     #TODO: remove it
     def __str__(self):

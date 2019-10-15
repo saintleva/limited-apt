@@ -214,7 +214,7 @@ class PrintRunner(RunnerBase):
         try:
             cache = get_cache()
             pkg = cache[package_name]
-            package = ConcretePackage(pkg.name, pkg.candidate.architecture)
+            package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
             coownership_list = self._load_coownership_list()
             users = coownership_list.owners_of(package)
             if users:
@@ -309,6 +309,7 @@ class ModificationRunner(RunnerBase):
 
     # TODO: Do I really need it?
     def __load_program_options(self):
+        apt_pkg.init_config()
         self.__default_release = apt_pkg.config["APT::Default-Release"] or None
 
     def __examine_and_apply_changes(self, tasks, enclosure, coownership, is_upgrading=False):
@@ -467,14 +468,16 @@ class ModificationRunner(RunnerBase):
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
                             # if installed package marked 'automatically installed' nobody owns it.
                             # Also we don't add "root" to this package owners for the same reason.
-                            coownership.add_ownership(concrete_package, self.username)
+                            if self.username != "root":
+                                coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
                             self.handlers.may_not_install(pkg, is_auto_installed_yet=True)
                             check_fatal()
                     else:
                         try:
-                            coownership.add_ownership(concrete_package, self.username, also_root=True)
+                            if self.username != "root":
+                                coownership.add_ownership(concrete_package, self.username, also_root=True)
                         except UserAlreadyOwnsThisPackage:
                             self.handlers.you_already_own_package(concrete_package)
                 else:
@@ -573,7 +576,8 @@ class ModificationRunner(RunnerBase):
                             # We don't need to catch UserAlreadyOwnsThisPackage exception because
                             # if installed package marked 'automatically installed' nobody owns it.
                             # Also we don't add "root" to this package owners for the same reason.
-                            coownership.add_ownership(concrete_package, self.username)
+                            if self.username != "root":
+                                coownership.add_ownership(concrete_package, self.username)
                             pkg.mark_auto(auto=False)
                         else:
                             self.handlers.may_not_markauto(pkg, True)
