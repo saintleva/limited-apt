@@ -49,10 +49,10 @@ class Applying(Modded):
             
             if is_upgrading:
                 def suffixed_package_name(pkg):
-                    return pkg.name
+                    return self.modes.pkg_str(pkg)
             else:
                 def suffixed_package_name(pkg):
-                    return pkg.name + '{a}' if pkg.is_auto_installed else pkg.name   
+                    return self.modes.pkg_str(pkg) + '{a}' if pkg.is_auto_installed else self.modes.pkg_str(pkg)
                                     
             terminal_width = get_terminal_width()
             

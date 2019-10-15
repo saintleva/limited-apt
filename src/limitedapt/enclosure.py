@@ -125,9 +125,9 @@ class Enclosure:
     def __iter__(self):
         return iter(self.__packages)
     
-    def __contains__(self, pkg):
+    def __contains__(self, package):
         try:
-            return self.__packages[pkg.name].has_arch_version(pkg.architecture, pkg.version)
+            return self.__packages[package.name].has_arch_version(package.architecture, package.version)
         except KeyError:
             return False
         
