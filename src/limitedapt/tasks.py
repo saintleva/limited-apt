@@ -15,9 +15,9 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-
 from limitedapt.packages import *
 from limitedapt.single import get_cache
+
 
 class Tasks:
 
@@ -37,12 +37,15 @@ class OnetypeConcretePkgTasks:
         self.__container = set()
         for task in onetype_tasks:
             pkg = cache[task]
-            self.__container.add(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
+            self.__container.add(pkg)
+            #self.__container.add(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
 
     def __contains__(self, pkg):
-        #TODO: debug and remove it:
-        #print("YO!")
-        return ConcretePackage(pkg.shortname, pkg.candidate.architecture) in self.__container
+        return pkg in self.__container
+        #return ConcretePackage(pkg.shortname, pkg.candidate.architecture) in self.__container
+
+    def __iter__(self):
+        return iter(self.__container)
 
     #TODO: remove it
     def __str__(self):

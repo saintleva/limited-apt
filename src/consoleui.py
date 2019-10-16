@@ -96,7 +96,7 @@ class Applying(Modded):
         print(tasks.install)
         print()
 
-        logically_installed = lambda pkg: pkg in tasks.install and pkg.is_installed  # and not pkg.marked_upgrade
+        logically_installed = lambda pkg: pkg in tasks.install and pkg.is_installed and not pkg.marked_upgrade
         logically_remove = lambda pkg: pkg in tasks.remove and not pkg.marked_delete
 
         print_onetype_operation_package_list(logically_installed, 'These new packages will be logically installed:')
