@@ -23,25 +23,42 @@ from limitedapt.tasks import *
 class AllChanges:
 
     def __init__(self):
-        self.logically_installed = set()
-        self.physically_installed = set()
-        self.logically_installed_but_physically_upgraded = set()
-        self.upgraded = set()
-        self.reinstalled = set()
-        self.downgraded = set()
-        self.logically_removed = set()
-        self.physically_removed = set()
-        self.kept = set()
+        self.logically_installed = []
+        self.physically_installed = []
+        self.logically_installed_but_physically_upgraded = []
+        self.upgraded = []
+        self.reinstalled = []
+        self.downgraded = []
+        self.logically_removed = []
+        self.physically_removed = []
+        self.kept = []
 
 
 def get_all_changes(changes, tasks):
     result = AllChanges()
+
     for pkg in changes:
         if pkg.marked_install:
+            result.physically_installed.append(pkg)
+        else:
             if pkg.is_installed:
-                if pkg in tasks.installed:
-                    if not pkg.marked_upgrade:
-                        result.logically_installed.add(pkg)
+                if pkg in tasks.install:
+                    if pkg.marked_upgrade:
+                        result.logically_installed_but_physically_upgraded.append(pkg)
+                elif pkg.marked_upgrade:
+                    result.upgraded.append(pkg)
+        if pkg.marked_reinstall:
+            result.reinstalled.append(pkg)
+        if pkg.marked_downgrade:
+            result.downgraded.append(pkg)
+        if pkg.marked_delete:
+            result.physically_removed.append(pkg)
+        if pkg.marked_keep:
+            result.kept.append(pkg)
 
-    for pkg in tasks.install:
-        if not pkg.
+    for pkg in tasks.install + tasks.unmarkauto:
+        if pkg.is_installed and not pkg.marked_upgrade:
+            result.logically_installed.append(pkg)
+    for pkg in tasks.remove + tasks.markauto:
+        if not pkg.marked_delete:
+            result.logically_removed.append(pkg)
