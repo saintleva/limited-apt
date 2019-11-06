@@ -38,7 +38,51 @@ def get_terminal_width():
      
 class Applying(Modded):
     
-    def show_changes(self, tasks, is_upgrading=False):
+    def show_changes(self, all_changes, is_upgrading=False):
+        if self.modes.wordy():
+            print('You want to perform these factical changes:')
+
+        terminal_width = get_terminal_width()
+
+        def print_onetype_operation_package_list(pkgs, suffix_func, header):
+            if pkgs:
+                print(header)
+                line = '  '
+                for pkg in pkgs:
+                    current_word = self.modes.pkg_str(pkg) + suffix_func(pkg)
+                    if len(current_word) + 2 > terminal_width:
+                        if line != '  ':
+                            print(line)
+                        print('  ' + current_word)
+                        line = '  '
+                    else:
+                        future_line = '  ' + current_word if line == '  ' else line + ' ' + current_word
+                        if len(future_line) > terminal_width:
+                            print(line)
+                            line = '  '
+                        else:
+                            line = future_line
+                if line != '  ':
+                    print(line)
+
+        print_onetype_operation_package_list(all_changes.logically_installed, lambda pkg: '',
+                                             'These new packages will be logically installed:')
+        print_onetype_operation_package_list(all_changes.physically_installed, lambda pkg: '{a}' if pkg.is_auto_installed else '',
+                                             'These new packages will be physically installed:')
+        print_onetype_operation_package_list(all_changes.logically_installed_but_physically_upgraded, lambda pkg: ''
+                                             'These packages will be logically installed but physically upgrade:')
+        print_onetype_operation_package_list(all_changes.upgraded, lambda pkg: '', 'These packages will be upgrade:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_reinstall,
+                                             'These packages will be reinstalled:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_downgrade,
+                                             'These packages will be downgraded:')
+        print_onetype_operation_package_list(logically_remove, 'These packages will be logically removed:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_delete,
+                                             'These packages will be physically removed:')
+        print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
+                                             'These packages will be kept at they current version:')
+
+    def old_show_changes(self, tasks, is_upgrading=False):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
 

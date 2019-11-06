@@ -30,7 +30,10 @@ class Tasks:
         self.unmarkauto = []
 
 
-class OnetypeConcretePkgTasks:
+class OnetypeRealTasks:
+
+    def __init__(self):
+        self.__container = set()
 
     def __init__(self, onetype_tasks):
         cache = get_cache()
@@ -38,14 +41,17 @@ class OnetypeConcretePkgTasks:
         for task in onetype_tasks:
             pkg = cache[task]
             self.__container.add(pkg)
-            #self.__container.add(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
 
     def __contains__(self, pkg):
         return pkg in self.__container
-        #return ConcretePackage(pkg.shortname, pkg.candidate.architecture) in self.__container
 
     def __iter__(self):
         return iter(self.__container)
+
+    def __add__(self, other):
+        result = OnetypeConcretePkgTasks()
+        result.__container = self.__container + other.__container
+        return result
 
     #TODO: remove it
     def __str__(self):
@@ -64,15 +70,15 @@ class OnetypeConcretePkgTasks:
             return str(package) + ", "
 
 
-class ConcretePkgTasks:
+class RealTasks:
 
     def __init__(self, tasks):
-        self.__install = OnetypeConcretePkgTasks(tasks.install)
-        self.__remove = OnetypeConcretePkgTasks(tasks.remove)
-        self.__physically_remove = OnetypeConcretePkgTasks(tasks.physically_remove)
-        self.__purge = OnetypeConcretePkgTasks(tasks.purge)
-        self.__markauto = OnetypeConcretePkgTasks(tasks.markauto)
-        self.__unmarkauto = OnetypeConcretePkgTasks(tasks.unmarkauto)
+        self.__install = OnetypeRealTasks(tasks.install)
+        self.__remove = OnetypeRealTasks(tasks.remove)
+        self.__physically_remove = OnetypeRealTasks(tasks.physically_remove)
+        self.__purge = OnetypeRealTasks(tasks.purge)
+        self.__markauto = OnetypeRealTasks(tasks.markauto)
+        self.__unmarkauto = OnetypeRealTasks(tasks.unmarkauto)
 
     @property
     def install(self):

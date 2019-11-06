@@ -31,6 +31,7 @@ class AllChanges:
         self.downgraded = []
         self.logically_removed = []
         self.physically_removed = []
+        self.purged = []
         self.kept = []
 
 
@@ -51,7 +52,7 @@ def get_all_changes(changes, tasks):
             result.reinstalled.append(pkg)
         if pkg.marked_downgrade:
             result.downgraded.append(pkg)
-        if pkg.marked_delete:
+        if pkg.marked_delete and not pkg in tasks.purge:
             result.physically_removed.append(pkg)
         if pkg.marked_keep:
             result.kept.append(pkg)
@@ -62,3 +63,5 @@ def get_all_changes(changes, tasks):
     for pkg in tasks.remove + tasks.markauto:
         if not pkg.marked_delete:
             result.logically_removed.append(pkg)
+    for pkg in tasks.purge:
+        result.purged.append(pkg)

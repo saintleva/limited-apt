@@ -31,6 +31,7 @@ from limitedapt.packages import *
 from limitedapt.coownership import *
 from limitedapt.enclosure import *
 from limitedapt.tasks import *
+from limitedapt.changes import *
 from limitedapt.modes import *
 from limitedapt.updatetime import *
 
@@ -315,16 +316,19 @@ class ModificationRunner(RunnerBase):
     def __examine_and_apply_changes(self, tasks, enclosure, coownership, is_upgrading=False):
         cache = get_cache()
         changes = cache.get_changes()
-        self.applying_ui.show_changes(ConcretePkgTasks(tasks), is_upgrading)
+        real_tasks = RealTasks(tasks)
+        all_changes = get_all_changes(changes, real_tasks)
+        if self.username == "root" and self.work_modes.purge_unused:
+            for pkg in changes:
+                if pkg.marked_delete and not pkg in (real_tasks.remove + real_tasks.physically_remove):
+                    pkg.mark_delete(purge=True)
+                    if not pkg in all_changes.purge:
+                        all_changes.purge.append(pkg)
 
+        self.applying_ui.show_changes(all_changes, is_upgrading)
         self.handlers.resolving_done()
 
-        if self.username == "root":
-            if self.work_modes.purge_unused:
-                for pkg in changes:
-                    if pkg.marked_delete:
-                        pkg.mark_delete(purge=True)
-        else:
+        if self.username != "root":
             errors = False
 
             def check_fatal():
