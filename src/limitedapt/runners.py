@@ -313,7 +313,7 @@ class ModificationRunner(RunnerBase):
         apt_pkg.init_config()
         self.__default_release = apt_pkg.config["APT::Default-Release"] or None
 
-    def __examine_and_apply_changes(self, tasks, enclosure, coownership, is_upgrading=False):
+    def __examine_and_apply_changes(self, tasks, enclosure, coownership):
         cache = get_cache()
         changes = cache.get_changes()
         real_tasks = RealTasks(tasks)
@@ -325,7 +325,7 @@ class ModificationRunner(RunnerBase):
                     if not pkg in all_changes.purge:
                         all_changes.purge.append(pkg)
 
-        self.applying_ui.show_changes(all_changes, is_upgrading)
+        self.applying_ui.show_changes(all_changes)
         self.handlers.resolving_done()
 
         if self.username != "root":
@@ -413,7 +413,7 @@ class ModificationRunner(RunnerBase):
             raise YouMayNotUpgradeError(constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME, full_upgrade)
         enclosure = self._load_enclosure()
         get_cache().upgrade(full_upgrade)
-        self.__examine_and_apply_changes(Tasks(), enclosure, coownership=None, is_upgrading=True)
+        self.__examine_and_apply_changes(Tasks(), enclosure, coownership=None)
 
     def perform_operations(self, tasks):
         if not self.has_privileges:

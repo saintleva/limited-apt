@@ -38,7 +38,7 @@ def get_terminal_width():
      
 class Applying(Modded):
     
-    def show_changes(self, all_changes, is_upgrading=False):
+    def show_changes(self, all_changes):
         if self.modes.wordy():
             print('You want to perform these factical changes:')
 
@@ -55,7 +55,7 @@ class Applying(Modded):
                             print(line)
                         print('  ' + current_word)
                         line = '  '
-                    else:
+                    else:q
                         future_line = '  ' + current_word if line == '  ' else line + ' ' + current_word
                         if len(future_line) > terminal_width:
                             print(line)
@@ -65,117 +65,51 @@ class Applying(Modded):
                 if line != '  ':
                     print(line)
 
-        print_onetype_operation_package_list(all_changes.logically_installed, lambda pkg: '',
+        non_suffix = lambda pkg: ''
+
+        def removing_suffix(pkg):
+            purging = 'p' if pkg in all_changes.purged else ''
+            auto = 'u' if pkg in pkg.is_auto_removable else ''
+            concated = '{' + purging + auto + '}'
+            return '' if concated == '{}' else concated
+
+        print_onetype_operation_package_list(all_changes.logically_installed, non_suffix,
                                              'These new packages will be logically installed:')
-        print_onetype_operation_package_list(all_changes.physically_installed, lambda pkg: '{a}' if pkg.is_auto_installed else '',
+        print_onetype_operation_package_list(all_changes.physically_installed,
+                                             lambda pkg: '{a}' if pkg.is_auto_installed else '',
                                              'These new packages will be physically installed:')
-        print_onetype_operation_package_list(all_changes.logically_installed_but_physically_upgraded, lambda pkg: ''
+        print_onetype_operation_package_list(all_changes.logically_installed_but_physically_upgraded, non_suffix,
                                              'These packages will be logically installed but physically upgrade:')
-        print_onetype_operation_package_list(all_changes.upgraded, lambda pkg: '', 'These packages will be upgrade:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_reinstall,
-                                             'These packages will be reinstalled:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_downgrade,
-                                             'These packages will be downgraded:')
-        print_onetype_operation_package_list(logically_remove, 'These packages will be logically removed:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_delete,
+        print_onetype_operation_package_list(all_changes.upgraded, non_suffix, 'These packages will be upgrade:')
+        print_onetype_operation_package_list(all_changes.reinstalled, non_suffix, 'These packages will be reinstalled:')
+        print_onetype_operation_package_list(all_changes.downgraded, non_suffix,'These packages will be downgraded:')
+        print_onetype_operation_package_list(all_changes.logically_removed, 'These packages will be logically removed:')
+        print_onetype_operation_package_list(all_changes.physically_removed + all_changes.purged, removing_suffix,
                                              'These packages will be physically removed:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
+        print_onetype_operation_package_list(all_changes.kept, non_suffix,
                                              'These packages will be kept at they current version:')
-
-    def old_show_changes(self, tasks, is_upgrading=False):
-        if self.modes.wordy():
-            print('You want to perform these factical changes:')
-
-        cache = single.get_cache()
-        changes = cache.get_changes()
-            
-        def print_onetype_operation_package_list(pkg_predicate, header):
-            
-            if is_upgrading:
-                def suffixed_package_name(pkg):
-                    return self.modes.pkg_str(pkg)
-            else:
-                def suffixed_package_name(pkg):
-                    return self.modes.pkg_str(pkg) + '{a}' if pkg.is_auto_installed else self.modes.pkg_str(pkg)
-                                    
-            terminal_width = get_terminal_width()
-            
-            package_list = sorted((pkg for pkg in changes if pkg_predicate(pkg)), key=lambda pkg: pkg.name)
-
-            if package_list:
-                print(header)
-                line = '  '
-                for pkg in package_list:
-
-                    #TODO: debug and remvoe it
-                    print(pkg.fullname)
-
-                    current_word = suffixed_package_name(pkg)
-                    if len(current_word) + 2 > terminal_width:
-                        if line != '  ':
-                            print(line)
-                        print('  ' + current_word)
-                        line = '  '
-                    else:
-                        future_line = '  ' + current_word if line == '  ' else line + ' ' + current_word
-                        if len(future_line) > terminal_width:
-                            print(line)
-                            line = '  '
-                        else:
-                            line = future_line
-                if line != '  ':
-                    print(line)
-
-#TODO: remove it
-#        print()
-#        print(tasks.install)
-#        print(tasks.remove)
-#        print(tasks.physically_remove)
-#        print(tasks.purge)
-#        print(tasks.markauto)
-#        print(tasks.unmarkauto)
-#        print()
-
-        print()
-        print(tasks.install)
-        print()
-
-        logically_installed = lambda pkg: pkg in tasks.install and pkg.is_installed and not pkg.marked_upgrade
-        logically_remove = lambda pkg: pkg in tasks.remove and not pkg.marked_delete
-
-        print_onetype_operation_package_list(logically_installed, 'These new packages will be logically installed:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_install,
-                                             'These new packages will be physically installed:')
-        print_onetype_operation_package_list(lambda pkg: pkg in tasks.install and pkg.marked_upgrade and not pkg.marked_install,
-                                             'These packages will be logically installed but physically upgrade:')
-        print_onetype_operation_package_list(lambda pkg: pkg not in tasks.install and pkg.marked_upgrade and not pkg.marked_install,
-                                             'These packages will be upgrade:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_reinstall,
-                                             'These packages will be reinstalled:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_downgrade,
-                                             'These packages will be downgraded:')
-        print_onetype_operation_package_list(logically_remove, 'These packages will be logically removed:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_delete,
-                                             'These packages will be physically removed:')
-        print_onetype_operation_package_list(lambda pkg: pkg.marked_keep,
-                                             'These packages will be kept at they current version:')
-
-        install_count = sum(1 for pkg in changes if pkg.marked_install)
-        update_count = sum(1 for pkg in changes if pkg.marked_upgrade and not pkg.marked_install)
-        logically_installed_count = sum(1 for pkg in changes if logically_installed(pkg))
-        logically_remove_count = sum(1 for pkg in changes if logically_remove(pkg))
 
         #TODO: Calculate count of "have not been updated"
         print(
-            '''{0} packages will be updated, {1} new will be logically installed, {2} new will be physically installed, ''' \
-            '''{3} marked for logical deletion, {4} marked for physically deletion.'''
-                .format(update_count, logically_installed_count, install_count, logically_remove_count, cache.delete_count))
+            '''{0} new will be logically installed, {1} new will be physically installed, ''' \
+            '''{2} will be logically installed but physically upgraded, {3} will be upgraded'''.
+                format(len(all_changes.logically_installed), len(all_changes.physically_installed),
+                       len(all_changes.logically_installed_but_physically_upgraded), len(all_changes.upgraded)))
+        if all_changes.reinstalled:
+            print(''', {0} will be reinstalled'''.format(len(all_changes.reinstalled)), end='')
+        if all_changes.downgraded:
+            print(''', {0} will be downgraded'''.format(len(all_changes.downgraded)), end='')
+        if all_changes.kept:
+            print(''', {0} will be kept at they current version'''.format(len(all_changes.kept)), end='')
+        print(''', {0} marked for logical deletion, {1} marked for physically deletion.'''.
+              format(len(all_changes.logically_removed), len(all_changes.physically_removed)), end='')
+
         print('''Required to download {0} archives. '''.format(pretty_size_str(cache.required_download)), end='')
         if cache.required_space >= 0:
             print('''{0} will be occupied after unpacking.'''.format(pretty_size_str(cache.required_space)))
         else:
             print('''{0} will be freed unpacking.'''.format(pretty_size_str(-cache.required_space)))
-    
+
     def prompt_agree(self):
         while True:
             print('Are you want to countinue? [Y/n]')
