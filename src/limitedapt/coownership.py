@@ -62,9 +62,13 @@ class CoownershipList:
     
     def is_sole_own(self, package, user):
         return { user } == self.__data[package] if package in self.__data else False
-    
+
+    def check_root_own(self, package):
+        if self.is_own("root", package):
+            raise UserAlreadyOwnsThisPackage("User '{0}' has already own package '{1}'".format("root", package))
+
     def add_ownership(self, package, user, also_root=False):
-        #TODO: Is it logics good? 
+        #TODO: Is it logics good?
         if package in self.__data:
             if user in self.__data[package]:
                 raise UserAlreadyOwnsThisPackage("User '{0}' has already own package '{1}'".format(user, package))

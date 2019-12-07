@@ -40,7 +40,7 @@ class Applying(Modded):
     
     def show_changes(self, all_changes):
         if self.modes.wordy():
-            print('You want to perform these factical changes:')
+            print('You want to perform these changes:')
 
         terminal_width = get_terminal_width()
 
@@ -55,7 +55,7 @@ class Applying(Modded):
                             print(line)
                         print('  ' + current_word)
                         line = '  '
-                    else:q
+                    else:
                         future_line = '  ' + current_word if line == '  ' else line + ' ' + current_word
                         if len(future_line) > terminal_width:
                             print(line)
@@ -70,8 +70,8 @@ class Applying(Modded):
         def removing_suffix(pkg):
             purging = 'p' if pkg in all_changes.purged else ''
             auto = 'u' if pkg in pkg.is_auto_removable else ''
-            concated = '{' + purging + auto + '}'
-            return '' if concated == '{}' else concated
+            concatenated = '{' + purging + auto + '}'
+            return '' if concatenated == '{}' else concatenated
 
         print_onetype_operation_package_list(all_changes.logically_installed, non_suffix,
                                              'These new packages will be logically installed:')
@@ -83,7 +83,8 @@ class Applying(Modded):
         print_onetype_operation_package_list(all_changes.upgraded, non_suffix, 'These packages will be upgrade:')
         print_onetype_operation_package_list(all_changes.reinstalled, non_suffix, 'These packages will be reinstalled:')
         print_onetype_operation_package_list(all_changes.downgraded, non_suffix,'These packages will be downgraded:')
-        print_onetype_operation_package_list(all_changes.logically_removed, 'These packages will be logically removed:')
+        print_onetype_operation_package_list(all_changes.logically_removed, non_suffix,
+                                             'These packages will be logically removed:')
         print_onetype_operation_package_list(all_changes.physically_removed + all_changes.purged, removing_suffix,
                                              'These packages will be physically removed:')
         print_onetype_operation_package_list(all_changes.kept, non_suffix,
@@ -94,7 +95,7 @@ class Applying(Modded):
             '''{0} new will be logically installed, {1} new will be physically installed, ''' \
             '''{2} will be logically installed but physically upgraded, {3} will be upgraded'''.
                 format(len(all_changes.logically_installed), len(all_changes.physically_installed),
-                       len(all_changes.logically_installed_but_physically_upgraded), len(all_changes.upgraded)))
+                       len(all_changes.logically_installed_but_physically_upgraded), len(all_changes.upgraded)), end='')
         if all_changes.reinstalled:
             print(''', {0} will be reinstalled'''.format(len(all_changes.reinstalled)), end='')
         if all_changes.downgraded:
@@ -102,8 +103,9 @@ class Applying(Modded):
         if all_changes.kept:
             print(''', {0} will be kept at they current version'''.format(len(all_changes.kept)), end='')
         print(''', {0} marked for logical deletion, {1} marked for physically deletion.'''.
-              format(len(all_changes.logically_removed), len(all_changes.physically_removed)), end='')
+              format(len(all_changes.logically_removed), len(all_changes.physically_removed)))
 
+        cache = single.get_cache()
         print('''Required to download {0} archives. '''.format(pretty_size_str(cache.required_download)), end='')
         if cache.required_space >= 0:
             print('''{0} will be occupied after unpacking.'''.format(pretty_size_str(cache.required_space)))
@@ -137,7 +139,9 @@ class ErrorHandlers(Modded):
         print('''Cannot find package "{0}"'''.format(pkg_name))
         
     def you_already_own_package(self, concrete_package):
-        print('''You already own package "{0}"'''.format(concrete_package))
+        cache = single.get_cache()
+        pkg = cache[str(concrete_package)]
+        print('''You already own package "{0}"'''.format(self.modes.pkg_str(pkg)))
         
     def may_not_install(self, pkg, is_auto_installed_yet=False):
         name = self.modes.pkg_str(pkg)
@@ -220,7 +224,7 @@ class ErrorHandlers(Modded):
 
     @staticmethod
     def __last_update_str(last_update):
-        return "has not ever been updated" if last_update is None else "was been updated at: " + \
+        return "has not ever been updated" if last_update is None else "was last been updated at: " + \
                                                                        last_update.isoformat(sep=" ", timespec="seconds")
 
     def distro_updating_warning(self, last_update):

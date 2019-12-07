@@ -134,7 +134,7 @@ def privileged_main():
         elif operation.endswith('&m'):
             tasks.unmarkauto.append(operation[:-2])
         else:
-            print_error('''Error: invalid operation on the suffix''')              
+            print_error('''Error: invalid operation on the suffix''')
             sys.exit(ExitCodes.INVALID_OPERATION_ON_THE_SUFFIX.value)
         
     diverse_parser = subparsers.add_parser('diverse', parents=[parent_operation_parser])
@@ -256,7 +256,7 @@ def privileged_main():
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_VARIABLE_FILE.value)
     except DistroHasNotBeenUpdated as err:
         last_update_str = "It has never been update" if err.time is None \
-            else "It was been updated at {0}".format(err.time.isoformat(sep=" ", timespec="seconds"))
+            else "It was last been updated at {0}".format(err.time.isoformat(sep=" ", timespec="seconds"))
         print_error('''Error: You must update list of available packages running '{0} update' command. {1}'''.
                     format(PROGRAM_NAME, last_update_str))
         if display_modes.wordy():

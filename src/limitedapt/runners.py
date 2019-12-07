@@ -180,12 +180,15 @@ class UpdationRunner(RunnerBase):
     def update(self):
         cache = get_cache()
         update_times = UpdateTimes()
-        cache.update(self.fetch_progress)
-        update_times.distro = datetime.now()
-        cache.open(None)  #TODO: Do I really need to re-open the cache here?
-        self.update_eclosure() #TODO: Do I need to use 'try' block?
-        update_times.enclosure = datetime.now()
-        self.__save_update_times(update_times)
+        try:
+            cache.update(self.fetch_progress)
+            update_times.distro = datetime.now()
+            cache.open(None)  #TODO: Do I really need to re-open the cache here?
+            self.update_eclosure() #TODO: Do I need to use 'try' block?
+            update_times.enclosure = datetime.now()
+            self.__save_update_times(update_times)
+        except apt.cache.FetchFailedException as err:
+            raise FetchFailedError(err)
 
 
 class PrintRunner(RunnerBase):
@@ -300,11 +303,12 @@ class ModificationRunner(RunnerBase):
         spec = importlib.util.spec_from_file_location("updating", filename)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        if module.is_distro_update_needed(update_times.effective_distro()):
+        distro_updated_time = update_times.effective_distro()
+        if module.is_distro_update_needed(distro_updated_time):
             if self.username == "root" and self.work_modes.force:
-                self.handlers.distro_updating_warning(update_times.effective_distro())
+                self.handlers.distro_updating_warning(distro_updated_time)
             else:
-                raise DistroHasNotBeenUpdated(update_times.effective_distro())
+                raise DistroHasNotBeenUpdated(distro_updated_time)
         if module.is_enclosure_update_needed(update_times.enclosure):
             self.handlers.enclosure_updating_warning(update_times.enclosure)
 
@@ -313,10 +317,9 @@ class ModificationRunner(RunnerBase):
         apt_pkg.init_config()
         self.__default_release = apt_pkg.config["APT::Default-Release"] or None
 
-    def __examine_and_apply_changes(self, tasks, enclosure, coownership):
+    def __examine_and_apply_changes(self, tasks, real_tasks, enclosure, coownership):
         cache = get_cache()
         changes = cache.get_changes()
-        real_tasks = RealTasks(tasks)
         all_changes = get_all_changes(changes, real_tasks)
         if self.username == "root" and self.work_modes.purge_unused:
             for pkg in changes:
@@ -392,7 +395,9 @@ class ModificationRunner(RunnerBase):
             if errors:
                 raise SystemComposingByResolverError()
 
-        # TODO: Is it right?
+        if real_tasks.is_empty():
+            raise GoodExit()
+
         if self.work_modes.assume_yes or self.applying_ui.prompt_agree():
             try:
                 if not self.work_modes.simulate:
@@ -413,7 +418,8 @@ class ModificationRunner(RunnerBase):
             raise YouMayNotUpgradeError(constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME, full_upgrade)
         enclosure = self._load_enclosure()
         get_cache().upgrade(full_upgrade)
-        self.__examine_and_apply_changes(Tasks(), enclosure, coownership=None)
+        tasks = Tasks()
+        self.__examine_and_apply_changes(tasks, RealTasks(tasks), enclosure, coownership=None)
 
     def perform_operations(self, tasks):
         if not self.has_privileges:
@@ -445,6 +451,8 @@ class ModificationRunner(RunnerBase):
             self._debug_message("you want to markauto: " + list_to_str(tasks.markauto))
         if tasks.unmarkauto:
             self._debug_message("you want to unmarkauto: " + list_to_str(tasks.unmarkauto))
+
+        real_tasks = RealTasks(tasks)
 
         errors = False
 
@@ -480,12 +488,21 @@ class ModificationRunner(RunnerBase):
                             check_fatal()
                     else:
                         try:
-                            if self.username != "root":
-                                coownership.add_ownership(concrete_package, self.username, also_root=True)
+                            if self.username == "root":
+                                coownership.check_root_own(concrete_package)
+                                coownership.add_ownership(concrete_package, "root")
+                            else:
+                                coownership.add_ownership(concrete_package, self.username,
+                                                          also_root=not coownership.is_any_user_own(concrete_package))
                         except UserAlreadyOwnsThisPackage:
                             self.handlers.you_already_own_package(concrete_package)
+                            real_tasks.install.remove(concrete_package)
                 else:
-                    if versioned_package in enclosure or self.username == "root":
+                    if self.username == "root":
+                        if coownership.is_any_user_own(concrete_package):
+                            coownership.add_ownership(concrete_package, "root")
+                        pkg.mark_install()
+                    elif versioned_package in enclosure:
                         coownership.add_ownership(concrete_package, self.username, also_root=False)
                         pkg.mark_install()
                     else:
@@ -513,6 +530,7 @@ class ModificationRunner(RunnerBase):
                             check_fatal()
                 else:
                     self.handlers.is_not_installed(pkg, "remove")
+                    real_tasks.remove.remove(concrete_package)
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
@@ -532,6 +550,7 @@ class ModificationRunner(RunnerBase):
                             pkg.mark_delete(purge=self.work_modes.purge_unused)
                 else:
                     self.handlers.is_not_installed(pkg, "physically-remove")
+                    real_tasks.physically_remove.remove(concrete_package)
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
@@ -551,6 +570,7 @@ class ModificationRunner(RunnerBase):
                             pkg.mark_delete(purge=True)
                 elif not pkg.has_config_files:
                     self.handlers.is_not_installed(pkg, "purge")
+                    real_tasks.purge.remove(concrete_package)
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
@@ -567,6 +587,7 @@ class ModificationRunner(RunnerBase):
                         check_fatal()
                 else:
                     self.handlers.is_not_installed(pkg, "markauto")
+                    real_tasks.markauto.remove(concrete_package)
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
@@ -588,12 +609,13 @@ class ModificationRunner(RunnerBase):
                             check_fatal()
                 else:
                     self.handlers.is_not_installed(pkg, "unmarkauto")
+                    real_tasks.unmarkauto.remove(concrete_package)
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
 
         if errors:
             raise SystemComposingByResolverError()
 
-        self.__examine_and_apply_changes(tasks, enclosure, coownership)
+        self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership)
         if not self.work_modes.simulate:
             self._save_coownership_list(coownership)

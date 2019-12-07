@@ -52,6 +52,12 @@ def get_all_changes(changes, tasks):
             result.reinstalled.append(pkg)
         if pkg.marked_downgrade:
             result.downgraded.append(pkg)
+
+        #TODO: Debug and remove it
+        if pkg.marked_delete:
+            print("asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdf")
+            sys.exit()
+
         if pkg.marked_delete and not pkg in tasks.purge:
             result.physically_removed.append(pkg)
         if pkg.marked_keep:
@@ -65,3 +71,5 @@ def get_all_changes(changes, tasks):
             result.logically_removed.append(pkg)
     for pkg in tasks.purge:
         result.purged.append(pkg)
+
+    return result

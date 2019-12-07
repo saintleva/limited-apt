@@ -40,7 +40,7 @@ class UpdateTimes:
 
     def effective_distro(self):
         try:
-            # TODO: Do I need use UTC?
+            #TODO: Do I need use UTC?
             file_time = datetime.utcfromtimestamp(os.path.getmtime("/var/cache/apt/pkgcache.bin"))
         except:
             file_time = None

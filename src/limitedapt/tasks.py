@@ -32,15 +32,17 @@ class Tasks:
 
 class OnetypeRealTasks:
 
-    def __init__(self):
-        self.__container = set()
+    def __init__(self, onetype_tasks = None):
+        self.__container = []
+        if onetype_tasks is not None:
+            cache = get_cache()
+            for task in onetype_tasks:
+                if task in cache: # Emit packages that are not in repository
+                    pkg = cache[task]
+                    self.__container.append(pkg)
 
-    def __init__(self, onetype_tasks):
-        cache = get_cache()
-        self.__container = set()
-        for task in onetype_tasks:
-            pkg = cache[task]
-            self.__container.add(pkg)
+    def __bool__(self):
+        return bool(self.__container)
 
     def __contains__(self, pkg):
         return pkg in self.__container
@@ -49,9 +51,14 @@ class OnetypeRealTasks:
         return iter(self.__container)
 
     def __add__(self, other):
-        result = OnetypeConcretePkgTasks()
+        result = OnetypeRealTasks()
         result.__container = self.__container + other.__container
         return result
+
+    def remove(self, concrete_package):
+        cache = get_cache()
+        pkg = cache[str(concrete_package)]
+        self.__container.remove(pkg)
 
     #TODO: remove it
     def __str__(self):
@@ -103,3 +110,6 @@ class RealTasks:
     @property
     def unmarkauto(self):
         return self.__unmarkauto
+
+    def is_empty(self):
+        return not (self.install or self.remove or self.physically_remove or self.purge or self.markauto or self.unmarkauto)
