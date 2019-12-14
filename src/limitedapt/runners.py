@@ -345,10 +345,14 @@ class ModificationRunner(RunnerBase):
                 versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
                 if pkg.marked_install and versioned_package not in enclosure and self.username != "root":
                     self.handlers.may_not_install(pkg)
+                    #TODO: remove it
+                    #print("IN __examine_and_apply_changes() 'if pkg.marked_install and versioned_package not in enclosure and self.use:' ...")
                     check_fatal()
-                if pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
+                if pkg.is_installed and pkg.marked_upgrade and versioned_package not in enclosure and not self.may_upgrade_package:
                     installed_version = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.installed)
                     self.handlers.may_not_upgrade_to_new(pkg, installed_version not in enclosure)
+                    #TODO: remove it
+                    #print("IN __examine_and_apply_changes() 'pkg.marked_upgrade' ...")
                     check_fatal()
                 if pkg.marked_downgrade and not self.work_modes.force:
                     if self.work_modes.force:
@@ -362,10 +366,12 @@ class ModificationRunner(RunnerBase):
                     else:
                         self.handlers.may_not_keep()
                         check_fatal()
-                if pkg.marked_delete and not pkg.is_auto_removable and self.username != "root" \
-                        and not coownership.is_sole_own(concrete_package, self.username):
-                    self.handlers.may_not_remove(pkg)
-                    check_fatal()
+                if pkg.marked_delete and not pkg.is_auto_removable:
+                    if coownership.is_sole_own(concrete_package, self.username):
+                        coownership.remove_ownership(concrete_package, self.username)
+                    else:
+                        self.handlers.may_not_remove(pkg)
+                        check_fatal()
                 if pkg.is_inst_broken and not pkg.is_now_broken:
                     if self.modes.force:
                         self.handlers.force_break(pkg)
@@ -379,7 +385,6 @@ class ModificationRunner(RunnerBase):
                 #                         check_fatal()
 
                 # TODO: Действительно ли я должен проверять это?
-
                 is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or
                                       pkg.marked_upgrade or pkg.marked_downgrade)
                 if is_setup_operation:
@@ -506,7 +511,7 @@ class ModificationRunner(RunnerBase):
                         coownership.add_ownership(concrete_package, self.username, also_root=False)
                         pkg.mark_install()
                     else:
-                        self.handlers.may_not_install(pkg)
+                        print("IN perform_operation()")
                         check_fatal()
             except KeyError:
                 self.handlers.cannot_find_package(package_name)
