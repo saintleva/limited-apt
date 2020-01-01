@@ -48,7 +48,7 @@ def get_all_changes(changes, tasks):
             result.reinstalled.append(pkg)
         if pkg.marked_downgrade:
             result.downgraded.append(pkg)
-        if pkg.marked_delete and not pkg in tasks.purge:
+        if pkg.marked_delete and pkg not in tasks.purge:
             result.physically_removed.append(pkg)
         if pkg.marked_keep:
             result.kept.append(pkg)

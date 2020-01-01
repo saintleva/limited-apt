@@ -467,9 +467,6 @@ class ModificationRunner(RunnerBase):
             if self.work_modes.fatal_errors:
                 raise WantToDoSystemComposingError()
 
-        import time
-        start = time.time()
-
         with cache.actiongroup():
             for package_name in tasks.install:
                 try:
@@ -623,9 +620,6 @@ class ModificationRunner(RunnerBase):
                         real_tasks.unmarkauto.remove(concrete_package)
                 except KeyError:
                     self.handlers.cannot_find_package(package_name)
-
-            finish = time.time()
-            print(finish - start, " SECONDS ELAPSED")
 
             if errors:
                 raise SystemComposingByResolverError()

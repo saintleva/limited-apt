@@ -129,9 +129,9 @@ def privileged_main():
             tasks.physically_remove.append(operation[:-1])
         elif operation.endswith('_'):
             tasks.purge.append(operation[:-1])
-        elif operation.endswith('&M'):
+        elif operation.endswith('%M'):
             tasks.markauto.append(operation[:-2])
-        elif operation.endswith('&m'):
+        elif operation.endswith('%m'):
             tasks.unmarkauto.append(operation[:-2])
         else:
             print_error('''Error: invalid operation on the suffix''')
@@ -139,11 +139,11 @@ def privileged_main():
         
     diverse_parser = subparsers.add_parser('diverse', parents=[parent_operation_parser])
     diverse_parser.add_argument('package_operations', nargs='*', metavar='operation',
-                                help='''a package with one of the suffixes: "+", "-", "^", "_", "&M", "&m" \
-                                (similarly to ones in aptitude)''')
+                                help='''a package with one of the suffixes: "+", "-", "^", "_", "%M", "%m" \
+                                (similarly to ones in aptitude, see 'man {0}' for details)'''.format(PROGRAM_NAME))
     
     # create the parser for the "safe-uprade" command
-    #TODO: Is this explanation (help string) right in the circumstances of limited-apt utility
+    #TODO: Is this explanation (help string) right in the circumstances of limited-apt utility?
     subparsers.add_parser('safe-upgrade', parents=[parent_operation_parser], help='Perform a safe upgrade.',
                           add_help=False)
     
@@ -167,7 +167,6 @@ def privileged_main():
         if args.subcommand in operation_subcommands_dict.keys() | {'safe-upgrade', 'full-upgrade', 'diverse'}:
             work_modes = WorkModes(args.force, args.purge_unused, args.fatal_errors, args.assume_yes, args.simulate)
             # TODO: Use "apt.progress.FetchProgress()" when it has been implemented
-            # TODO: test it
             progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
             runner = ModificationRunner(user_id, display_modes, work_modes, consoleui.ErrorHandlers(), consoleui.Applying(),
                                         progresses, sys.stderr)
