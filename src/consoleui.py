@@ -69,7 +69,7 @@ class Applying(Modded):
 
         def removing_suffix(pkg):
             purging = 'p' if pkg in all_changes.purged else ''
-            auto = 'u' if pkg in pkg.is_auto_removable else ''
+            auto = 'u' if pkg.is_auto_removable else ''
             concatenated = '{' + purging + auto + '}'
             return '' if concatenated == '{}' else concatenated
 
@@ -167,9 +167,13 @@ class ErrorHandlers(Modded):
         print('''Error: package "{0}" which you want to {1} is not installed'''.
               format(self.modes.pkg_str(pkg), action_dict[why_must_be]))
         
-    def may_not_remove(self, pkg):
+    def may_not_remove(self, pkg, is_root=False):
         print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
-              '''you have installed later and want to explicitly remove'''.format(self.modes.pkg_str(pkg)))
+              '''you have installed'''.format(self.modes.pkg_str(pkg)), end='')
+        if is_root:
+            print('''. Despite this you can explicitly physically remove packages using "physically-remove" subcommand''')
+        else:
+            print()
         
     def may_not_physically_remove(self, pkg):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.

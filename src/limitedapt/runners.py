@@ -364,10 +364,8 @@ class ModificationRunner(RunnerBase):
                         check_fatal()
                 if pkg.marked_delete and not pkg.is_auto_removable:
                     if self.username == "root":
-                        if not coownership.is_any_user_own(concrete_package):
-                            coownership.remove_ownership(concrete_package, "root")
-                        else:
-                            self.handlers.may_not_remove(pkg)
+                        if coownership.is_any_user_own(concrete_package):
+                            self.handlers.may_not_remove(pkg, is_root=True)
                             check_fatal()
                     elif coownership.is_sole_own(concrete_package, self.username):
                         coownership.remove_ownership(concrete_package, self.username)
@@ -469,159 +467,169 @@ class ModificationRunner(RunnerBase):
             if self.work_modes.fatal_errors:
                 raise WantToDoSystemComposingError()
 
-        for package_name in tasks.install:
-            try:
-                pkg = cache[package_name]
-                # TODO: Is it correct?
-                versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
-                concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
-                if pkg.is_installed:
-                    if pkg.is_upgradable:
-                        if versioned_package in enclosure or self.may_upgrade_package:
-                            pkg.mark_upgrade()
-                        else:
-                            self.handlers.may_not_upgrade_to_new(pkg, pkg.candidate.version)
-                            check_fatal()
-                    if pkg.is_auto_installed:
-                        if versioned_package in enclosure:
-                            # We don't need to catch UserAlreadyOwnsThisPackage exception because
-                            # if installed package marked 'automatically installed' nobody owns it.
-                            # Also we don't add "root" to this package owners for the same reason.
-                            if self.username != "root":
-                                coownership.add_ownership(concrete_package, self.username)
-                            pkg.mark_auto(auto=False)
-                        else:
-                            self.handlers.may_not_install(pkg, is_auto_installed_yet=True)
-                            check_fatal()
-                    else:
-                        try:
-                            if self.username == "root":
-                                coownership.check_root_own(concrete_package)
-                                coownership.add_ownership(concrete_package, "root")
+        import time
+        start = time.time()
+
+        with cache.actiongroup():
+            for package_name in tasks.install:
+                try:
+                    pkg = cache[package_name]
+                    # TODO: Is it correct?
+                    versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
+                    concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+                    if pkg.is_installed:
+                        if pkg.is_upgradable:
+                            if versioned_package in enclosure or self.may_upgrade_package:
+                                pkg.mark_upgrade()
                             else:
-                                coownership.add_ownership(concrete_package, self.username,
-                                                          also_root=not coownership.is_any_user_own(concrete_package))
-                        except UserAlreadyOwnsThisPackage:
-                            self.handlers.you_already_own_package(concrete_package)
-                            real_tasks.install.remove(concrete_package)
-                else:
-                    if self.username == "root":
-                        if coownership.is_any_user_own(concrete_package):
-                            coownership.add_ownership(concrete_package, "root")
-                        pkg.mark_install()
-                    elif versioned_package in enclosure:
-                        coownership.add_ownership(concrete_package, self.username, also_root=False)
-                        pkg.mark_install()
+                                self.handlers.may_not_upgrade_to_new(pkg, pkg.candidate.version)
+                                check_fatal()
+                        if pkg.is_auto_installed:
+                            if versioned_package in enclosure:
+                                # We don't need to catch UserAlreadyOwnsThisPackage exception because
+                                # if installed package marked 'automatically installed' nobody owns it.
+                                # Also we don't add "root" to this package owners for the same reason.
+                                if self.username != "root":
+                                    coownership.add_ownership(concrete_package, self.username)
+                                pkg.mark_auto(auto=False)
+                            else:
+                                self.handlers.may_not_install(pkg, is_auto_installed_yet=True)
+                                check_fatal()
+                        else:
+                            try:
+                                if self.username == "root":
+                                    coownership.check_root_own(concrete_package)
+                                    coownership.add_ownership(concrete_package, "root")
+                                else:
+                                    coownership.add_ownership(concrete_package, self.username,
+                                                              also_root=not coownership.is_any_user_own(concrete_package))
+                            except UserAlreadyOwnsThisPackage:
+                                self.handlers.you_already_own_package(concrete_package)
+                                real_tasks.install.remove(concrete_package)
                     else:
-                        check_fatal()
-            except KeyError:
-                self.handlers.cannot_find_package(package_name)
-
-        for package_name in tasks.remove:
-            try:
-                pkg = cache[package_name]
-                if pkg.is_installed:
-                    try:
-                        concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
-                        if coownership.remove_ownership(concrete_package, self.username) == Own.NOBODY:
-                            pkg.mark_delete(purge=self.work_modes.purge_unused)
-                    except UserDoesNotOwnPackage:
-                        self.handlers.may_not_remove(pkg)
-                        check_fatal()
-                    except PackageIsNotInstalled:
                         if self.username == "root":
-                            pkg.mark_delete(purge=self.work_modes.purge_unused)
+                            if coownership.is_any_user_own(concrete_package):
+                                coownership.add_ownership(concrete_package, "root")
+                            pkg.mark_install()
+                        elif versioned_package in enclosure:
+                            coownership.add_ownership(concrete_package, self.username, also_root=False)
+                            pkg.mark_install()
                         else:
-                            self.handlers.may_not_remove(pkg)
                             check_fatal()
-                else:
-                    self.handlers.is_not_installed(pkg, "remove")
-                    real_tasks.remove.remove(concrete_package)
-            except KeyError:
-                self.handlers.cannot_find_package(package_name)
+                except KeyError:
+                    self.handlers.cannot_find_package(package_name)
 
-        for package_name in tasks.physically_remove:
-            try:
-                pkg = cache[package_name]
-                if pkg.is_installed:
-                    if self.username != "root":
-                        self.handlers.may_not_physically_remove(pkg)
-                        check_fatal()
-                    else:
+            for package_name in tasks.remove:
+                try:
+                    pkg = cache[package_name]
+                    concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+                    if pkg.is_installed:
                         try:
-                            coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
+                            if coownership.remove_ownership(concrete_package, self.username) == Own.NOBODY:
+                                pkg.mark_delete(purge=self.work_modes.purge_unused)
+                        except UserDoesNotOwnPackage:
+                            self.handlers.may_not_remove(pkg, is_root=(self.username == "root"))
+                            check_fatal()
                         except PackageIsNotInstalled:
-                            self.handlers.simple_removation(pkg)
-                        finally:
-                            pkg.mark_delete(purge=self.work_modes.purge_unused)
-                else:
-                    self.handlers.is_not_installed(pkg, "physically-remove")
-                    real_tasks.physically_remove.remove(concrete_package)
-            except KeyError:
-                self.handlers.cannot_find_package(package_name)
-
-        for package_name in tasks.purge:
-            try:
-                pkg = cache[package_name]
-                if pkg.is_installed:
-                    if self.username != "root":
-                        self.handlers.may_not_purge(pkg)
-                        check_fatal()
+                            if self.username == "root":
+                                pkg.mark_delete(purge=self.work_modes.purge_unused)
+                            else:
+                                self.handlers.may_not_remove(pkg)
+                                check_fatal()
                     else:
-                        try:
-                            coownership.remove_package(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
-                        except PackageIsNotInstalled:
-                            self.handlers.simple_removation(pkg)
-                        finally:
-                            pkg.mark_delete(purge=True)
-                elif not pkg.has_config_files:
-                    self.handlers.is_not_installed(pkg, "purge")
-                    real_tasks.purge.remove(concrete_package)
-            except KeyError:
-                self.handlers.cannot_find_package(package_name)
+                        self.handlers.is_not_installed(pkg, "remove")
+                        real_tasks.remove.remove(concrete_package)
+                except KeyError:
+                    self.handlers.cannot_find_package(package_name)
 
-        for package_name in tasks.markauto:
-            try:
-                pkg = cache[package_name]
-                if pkg.is_installed:
-                    try:
-                        concrete_package = ConcretePackage(pkg.shortname, pkg.architecture())
-                        if coownership.remove_ownership(concrete_package, self.username) == Own.NOBODY:
-                            pkg.mark_auto(auto=True)
-                    except UserDoesNotOwnPackage:
-                        self.handlers.may_not_markauto(pkg)
-                        check_fatal()
-                else:
-                    self.handlers.is_not_installed(pkg, "markauto")
-                    real_tasks.markauto.remove(concrete_package)
-            except KeyError:
-                self.handlers.cannot_find_package(package_name)
-
-        for package_name in tasks.unmarkauto:
-            try:
-                pkg = cache[package_name]
-                if pkg.is_installed:
-                    if pkg.is_auto_installed:
-                        if VersionedPackage(pkg.shortname, pkg.candidate.architecture,
-                                            pkg.candidate.version) in enclosure:
-                            # We don't need to catch UserAlreadyOwnsThisPackage exception because
-                            # if installed package marked 'automatically installed' nobody owns it.
-                            # Also we don't add "root" to this package owners for the same reason.
-                            if self.username != "root":
-                                coownership.add_ownership(concrete_package, self.username)
-                            pkg.mark_auto(auto=False)
+            for package_name in tasks.physically_remove:
+                try:
+                    pkg = cache[package_name]
+                    concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+                    if pkg.is_installed:
+                        if self.username != "root":
+                            self.handlers.may_not_physically_remove(pkg)
+                            check_fatal()
                         else:
-                            self.handlers.may_not_markauto(pkg, True)
+                            try:
+                                coownership.remove_package(concrete_package)
+                            except PackageIsNotInstalled:
+                                self.handlers.simple_removation(pkg)
+                            finally:
+                                pkg.mark_delete(purge=self.work_modes.purge_unused)
+                    else:
+                        self.handlers.is_not_installed(pkg, "physically-remove")
+                        real_tasks.physically_remove.remove(concrete_package)
+                except KeyError:
+                    self.handlers.cannot_find_package(package_name)
+
+            for package_name in tasks.purge:
+                try:
+                    pkg = cache[package_name]
+                    concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+                    if pkg.is_installed:
+                        if self.username != "root":
+                            self.handlers.may_not_purge(pkg)
                             check_fatal()
-                else:
-                    self.handlers.is_not_installed(pkg, "unmarkauto")
-                    real_tasks.unmarkauto.remove(concrete_package)
-            except KeyError:
-                self.handlers.cannot_find_package(package_name)
+                        else:
+                            try:
+                                coownership.remove_package(concrete_package)
+                            except PackageIsNotInstalled:
+                                self.handlers.simple_removation(pkg)
+                            finally:
+                                pkg.mark_delete(purge=True)
+                    elif not pkg.has_config_files:
+                        self.handlers.is_not_installed(pkg, "purge")
+                        real_tasks.purge.remove(concrete_package)
+                except KeyError:
+                    self.handlers.cannot_find_package(package_name)
 
-        if errors:
-            raise SystemComposingByResolverError()
+            for package_name in tasks.markauto:
+                try:
+                    pkg = cache[package_name]
+                    concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+                    if pkg.is_installed:
+                        try:
+                            if coownership.remove_ownership(concrete_package, self.username) == Own.NOBODY:
+                                pkg.mark_auto(auto=True)
+                        except UserDoesNotOwnPackage:
+                            self.handlers.may_not_markauto(pkg)
+                            check_fatal()
+                    else:
+                        self.handlers.is_not_installed(pkg, "markauto")
+                        real_tasks.markauto.remove(concrete_package)
+                except KeyError:
+                    self.handlers.cannot_find_package(package_name)
 
-        self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership)
-        if not self.work_modes.simulate:
-            self._save_coownership_list(coownership)
+            for package_name in tasks.unmarkauto:
+                try:
+                    pkg = cache[package_name]
+                    concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+                    if pkg.is_installed:
+                        if pkg.is_auto_installed:
+                            if VersionedPackage(pkg.shortname, pkg.candidate.architecture,
+                                                pkg.candidate.version) in enclosure:
+                                # We don't need to catch UserAlreadyOwnsThisPackage exception because
+                                # if installed package marked 'automatically installed' nobody owns it.
+                                # Also we don't add "root" to this package owners for the same reason.
+                                if self.username != "root":
+                                    coownership.add_ownership(concrete_package, self.username)
+                                pkg.mark_auto(auto=False)
+                            else:
+                                self.handlers.may_not_markauto(pkg, True)
+                                check_fatal()
+                    else:
+                        self.handlers.is_not_installed(pkg, "unmarkauto")
+                        real_tasks.unmarkauto.remove(concrete_package)
+                except KeyError:
+                    self.handlers.cannot_find_package(package_name)
+
+            finish = time.time()
+            print(finish - start, " SECONDS ELAPSED")
+
+            if errors:
+                raise SystemComposingByResolverError()
+
+            self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership)
+            if not self.work_modes.simulate:
+                self._save_coownership_list(coownership)

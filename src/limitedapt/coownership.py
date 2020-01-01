@@ -75,7 +75,7 @@ class CoownershipList:
             else:
                 self.__data[package].add(user)
         else:
-            self.__data[package] = {user}
+            self.__data[package] = { user }
         if also_root and user != "root":
             self.__data[package].add("root")
             

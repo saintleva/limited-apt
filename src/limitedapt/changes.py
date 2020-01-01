@@ -15,10 +15,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-#TODO: maybe remove it
-from apt.cache import *
-from limitedapt.tasks import *
-
 
 class AllChanges:
 
@@ -52,12 +48,6 @@ def get_all_changes(changes, tasks):
             result.reinstalled.append(pkg)
         if pkg.marked_downgrade:
             result.downgraded.append(pkg)
-
-        #TODO: Debug and remove it
-        if pkg.marked_delete:
-            print("asdfasdfasdfasdfasdfasdfasdfasdfasdfasdfasdf")
-            sys.exit()
-
         if pkg.marked_delete and not pkg in tasks.purge:
             result.physically_removed.append(pkg)
         if pkg.marked_keep:
