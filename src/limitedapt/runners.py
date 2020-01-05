@@ -21,6 +21,7 @@ from datetime import datetime
 import pwd
 import grp
 import os.path
+from lxml import etree
 import apt
 import apt_pkg
 import apt.progress.base
@@ -241,6 +242,8 @@ class ModificationRunner(RunnerBase):
     def __init__(self, user_id, display_modes, work_modes, handlers, applying_ui, progresses, debug_stream):
         if get_cache().dpkg_journal_dirty:
             raise DpkgJournalDirtyError()
+        if os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
+            raise PrecedingTasksHasNotBeenCompletedError()
         self.__work_modes = work_modes
         super().__init__(user_id, display_modes, debug_stream)
         self.__handlers = handlers
@@ -627,3 +630,31 @@ class ModificationRunner(RunnerBase):
             self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership)
             if not self.work_modes.simulate:
                 self._save_coownership_list(coownership)
+
+    def fix_interrupted(self):
+        if self.username != "root":
+            raise YouMayNotFixInterruptedError()
+        if not os.path.exists(PATH_TO_UMCOMPLETED_TASKS):
+            raise NothingInterruptedError()
+
+        # Parse file with uncompleted tasks
+        try:
+            cache = get_cache()
+            root = etree.parse(PATH_TO_UMCOMPLETED_TASKS).getroot()
+            interrupted_type = root.get("type")
+            if interrupted_type == "safe-upgrade":
+                cache.upgrade(dist_upgrade=False)
+            elif interrupted_type == "full-upgrade":
+                cache.upgrade(dist_upgrade=True)
+            elif interrupted_type == "full-upgrade":
+                tasks = RealTasks()
+                tasks.import_from_xml_element(root)
+                for package in tasks.install:
+                    cache[str(package)].mark_install()
+#                    if not pkg.is_installed:
+#                        pkg.mark_install()
+#                        pkg.ma
+        else:
+            raise ValueError()
+        except (ValueError, LookupError, etree.XMLSyntaxError) as err:
+            pass

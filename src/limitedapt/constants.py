@@ -15,12 +15,16 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import os
+
 
 UNIX_LIMITEDAPT_GROUPNAME = 'limited-apt'
 UNIX_LIMITEDAPT_ROOTS_GROUPNAME = 'limited-apt-roots'
 UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME = 'limited-apt-upgraders'
 
-PATH_TO_PROGRAM_VARIABLE="/var/lib/limited-apt/"
+PATH_TO_PROGRAM_VARIABLE = "/var/lib/limited-apt/"
+UNCOMPLETED_TASKS_FILENAME = "uncompleted-tasks"
+PATH_TO_UMCOMPLETED_TASKS = os.path.join(PATH_TO_PROGRAM_VARIABLE, UNCOMPLETED_TASKS_FILENAME)
 
 PACKED_IN_DEB = False
 

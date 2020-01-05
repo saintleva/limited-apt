@@ -20,7 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 import sys
 import argparse
 import apt.progress.base
@@ -146,11 +145,16 @@ def privileged_main():
     #TODO: Is this explanation (help string) right in the circumstances of limited-apt utility?
     subparsers.add_parser('safe-upgrade', parents=[parent_operation_parser], help='Perform a safe upgrade.',
                           add_help=False)
-    
     # create the parser for the "full-upgrade" command
     subparsers.add_parser('full-upgrade', parents=[parent_operation_parser],
                           help='Perform an upgrade, possibly installing and removing packages.', add_help=False)
     
+    subparsers.add_parser('fix-interrupted', parents=[parent_operation_parser],
+                          help='Complete tasks of previous user that has been interrupted.', add_help=False)
+    subparsers.add_parser('ignore-interrupted', parents=[parent_operation_parser],
+                          help='Ignore interrupted tasks and remove "{0}" filename.'.format(UNCOMPLETED_TASKS_FILENAME),
+                          add_help=False)
+
     for operation, help in operation_subcommands_dict.items():
         operation_subcommand_parser = subparsers.add_parser(operation, parents=[parent_operation_parser],
                                                             help=help)
@@ -162,9 +166,11 @@ def privileged_main():
     
 
     display_modes = DisplayModes(args.show_arch, args.verbose, args.debug)
-        
+
+    from src.limitedapt.errors import NothingInterruptedError
+    from src.limitedapt.errors import PrecedingTasksHasNotBeenCompletedError
     try:
-        if args.subcommand in operation_subcommands_dict.keys() | {'safe-upgrade', 'full-upgrade', 'diverse'}:
+        if args.subcommand in operation_subcommands_dics() | {'safe-upgrade', 'full-upgrade', 'diverse', 'fix-interrupted'}:
             work_modes = WorkModes(args.force, args.purge_unused, args.fatal_errors, args.assume_yes, args.simulate)
             # TODO: Use "apt.progress.FetchProgress()" when it has been implemented
             progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
@@ -174,6 +180,8 @@ def privileged_main():
                 runner.upgrade(full_upgrade=False)
             elif args.subcommand == 'full-upgrade':
                 runner.upgrade(full_upgrade=True)
+            elif args.subcommand == 'fix-interrupted':
+                runner.fix_interrupted()
             else:
                 tasks = Tasks()
                 if args.subcommand == 'install':
@@ -267,6 +275,21 @@ def privileged_main():
             print('''All dpkg operations will fail until this is fixed, the action to fix the system '''
                   '''if dpkg got interrupted is to run ‘dpkg –configure -a’ as root''')
         sys.exit(ExitCodes.DPKG_JOUNAL_DIRTY.value)
+    except PrecedingTasksHasNotBeenCompletedError:
+        print_error('Error: preceding tasks has been interruped')
+        if display_modes.wordy():
+            print('''Dpkg journal is good but may be '{0}' was been interrupted at package downloading stage. '''
+                  '''You must run '{0} fix-interrupted' or '{0} ignore-interrupted' as root in order to unlock {0}. '''
+                  '''Of course '{0} fix-interrupted' is recommended'''.format(PROGRAM_NAME))
+        sys.exit(ExitCodes.PRECEDING_TASKS_HAS_NOT_BEEN_COMPLETED.value)
+    except NothingInterruptedError:
+        print_error('Error: nothing to fix')
+        if display_modes.wordy():
+            print(''''{0}' is good. Nothing has been interrupapt.ted'''.format(PROGRAM_NAME))
+        sys.exit(ExitCodes.NOTHING_INTERRUPTED.value)
+    except (YouMayNotFixInterruptedError, YouMayNotIgnoreInterruptedError):
+        print_error('''Error: only root is able to use "fix-interrupted" and "ignore-interrupted" subcommands''')
+        sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
     except LockFailedError as err:
         print_error('CANNOT LOCK: ', err)
         sys.exit(ExitCodes.LOCK_FAILED.value)

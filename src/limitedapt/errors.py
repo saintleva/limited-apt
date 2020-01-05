@@ -72,6 +72,12 @@ class OnlyRootMayForceError(YouHaveNotPrivilegesError): pass
 
 class YouMayNotPurgeError(YouHaveNotPrivilegesError): pass
 
+class YouMayNotProcessInterruptedError(YouHaveNotPrivilegesError): pass
+
+class YouMayNotFixInterruptedError(YouMayNotProcessInterruptedError): pass
+
+class YouMayNotIgnoreInterruptedError(YouMayNotProcessInterruptedError): pass
+
 class GroupNotExistError(TerminationError, GroupProblem):
 
     def __init__(self, group_name):
@@ -126,7 +132,13 @@ class DistroHasNotBeenUpdated(TerminationError):
     def time(self):
         return self.__time
 
-class DpkgJournalDirtyError(TerminationError): pass
+class PackageManagerError(TerminationError): pass
+
+class DpkgJournalDirtyError(PackageManagerError): pass
+
+class PrecedingTasksHasNotBeenCompletedError(PackageManagerError): pass
+
+class NothingInterruptedError(TerminationError): pass
 
 class AptProcessingError(TerminationError): pass
 
