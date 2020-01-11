@@ -44,7 +44,8 @@ class DisplayModes:
 
 class WorkModes:
 
-    def __init__(self, force, purge_unused, fatal_errors, assume_yes, simulate):
+    def __init__(self, remove_dependencies, force, purge_unused, fatal_errors, assume_yes, simulate):
+        self.__remove_dependencies = remove_dependencies
         self.__force = force
         self.__purge_unused = purge_unused
         self.__fatal_errors = fatal_errors

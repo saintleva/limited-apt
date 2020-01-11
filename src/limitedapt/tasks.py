@@ -15,6 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+import apt.package
 from limitedapt.packages import *
 from limitedapt.single import get_cache
 
@@ -44,8 +45,14 @@ class OnetypeRealTasks:
     def __bool__(self):
         return bool(self.__container)
 
-    def __contains__(self, pkg):
-        return pkg in self.__container
+    def __contains__(self, package):
+        if isinstance(package, apt.package.Package):
+            return package in self.__container
+        elif isinstance(package, ConcretePackage):
+            cache = get_cache()
+            return cache[str(package)] in self.__container
+        else:
+            raise TypeError("ConcretePackage or apt.package.Package instance is required")
 
     def __iter__(self):
         return iter(self.__container)

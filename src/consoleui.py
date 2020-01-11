@@ -167,13 +167,20 @@ class ErrorHandlers(Modded):
         print('''Error: package "{0}" which you want to {1} is not installed'''.
               format(self.modes.pkg_str(pkg), action_dict[why_must_be]))
         
-    def may_not_remove(self, pkg, is_root=False):
+    def may_not_remove(self, pkg, is_root=False, sole_owns=False):
         print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
-              '''you have installed'''.format(self.modes.pkg_str(pkg)), end='')
-        if is_root:
-            print('''. Despite this you can explicitly physically remove packages using "physically-remove" subcommand''')
-        else:
-            print()
+              '''you have installed later'''.format(self.modes.pkg_str(pkg)), end='')
+        if self.modes.verbose:
+            if sole_owns:
+                print('''. In order to remove packages you have not specified to remove explicitly '''
+                      '''(and you have installed them later) use "--remove-dependencies" option''', end='')
+                if is_root:
+                    print('''. Also despite this you can explicitly physically remove packages using "physically-remove" subcommand''',
+                          end='')
+            elif is_root:
+                print('''. Despite this you can explicitly physically remove packages using "physically-remove" subcommand''',
+                      end='')
+        print()
         
     def may_not_physically_remove(self, pkg):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.

@@ -365,16 +365,23 @@ class ModificationRunner(RunnerBase):
                     else:
                         self.handlers.may_not_keep()
                         check_fatal()
-                if pkg.marked_delete and not pkg.is_auto_removable:
-                    if self.username == "root":
-                        if coownership.is_any_user_own(concrete_package):
-                            self.handlers.may_not_remove(pkg, is_root=True)
+                if pkg.marked_delete and not pkg.is_auto_removable and pkg not in real_tasks:
+                    sole_owns = coownership.is_sole_own(concrete_package, self.username)
+                    if self.work_modes.remove_dependecies:
+                        if sole_owns:
+                            # User will be never being root here
+                            coownership.remove_ownership(concrete_package, self.username)
+                        else:
+                            self.handlers.may_not_remove(pkg)
                             check_fatal()
-                    elif coownership.is_sole_own(concrete_package, self.username):
-                        coownership.remove_ownership(concrete_package, self.username)
                     else:
-                        self.handlers.may_not_remove(pkg)
-                        check_fatal()
+                        if self.username == "root":
+                            if coownership.is_any_user_own(concrete_package):
+                                self.handlers.may_not_remove(pkg, is_root=True, sole_owns=sole_owns)
+                                check_fatal()
+                        else:
+                            self.handlers.may_not_remove(pkg, sole_owns=sole_owns)
+                            check_fatal()
                 if pkg.is_inst_broken and not pkg.is_now_broken:
                     if self.modes.force:
                         self.handlers.force_break(pkg)
@@ -410,6 +417,8 @@ class ModificationRunner(RunnerBase):
             try:
                 if not self.work_modes.simulate:
                     cache.commit(self.progresses.acquire, self.progresses.install)
+                    if not self.work_modes.simulate:
+                        self._save_coownership_list(coownership)
                 else:
                     self.handlers.simulate()
             except apt.cache.LockFailedException as err:
@@ -425,9 +434,10 @@ class ModificationRunner(RunnerBase):
         if not self.has_privileges:
             raise YouMayNotUpgradeError(constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME, full_upgrade)
         enclosure = self._load_enclosure()
+        coownership = self._load_coownership_list()
         get_cache().upgrade(full_upgrade)
         tasks = Tasks()
-        self.__examine_and_apply_changes(tasks, RealTasks(tasks), enclosure, coownership=None)
+        self.__examine_and_apply_changes(tasks, RealTasks(tasks), enclosure, coownership)
 
     def perform_operations(self, tasks):
         if not self.has_privileges:
@@ -628,8 +638,6 @@ class ModificationRunner(RunnerBase):
                 raise SystemComposingByResolverError()
 
             self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership)
-            if not self.work_modes.simulate:
-                self._save_coownership_list(coownership)
 
     def fix_interrupted(self):
         if self.username != "root":
@@ -654,6 +662,8 @@ class ModificationRunner(RunnerBase):
 #                    if not pkg.is_installed:
 #                        pkg.mark_install()
 #                        pkg.ma
+            else:
+                pass
         else:
             raise ValueError()
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:

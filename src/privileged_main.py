@@ -99,6 +99,9 @@ def privileged_main():
 
     parent_operation_parser = argparse.ArgumentParser(add_help=False)
     #TODO: Show help for these arguments:
+    parent_operation_parser.add_argument('-r', '--remove-dependencies', action='store_true',
+                                         help="Allow to remove packages you don't specity to remove explicitly "
+                                              "(and you have installed them later")
     parent_operation_parser.add_argument('-f', '--force', action='store_true',
                                          help="Allow root to do (implicit) forbidden actions.")
     parent_operation_parser.add_argument('-p', '--purge-unused', action='store_true',
@@ -167,11 +170,10 @@ def privileged_main():
 
     display_modes = DisplayModes(args.show_arch, args.verbose, args.debug)
 
-    from src.limitedapt.errors import NothingInterruptedError
-    from src.limitedapt.errors import PrecedingTasksHasNotBeenCompletedError
     try:
         if args.subcommand in operation_subcommands_dics() | {'safe-upgrade', 'full-upgrade', 'diverse', 'fix-interrupted'}:
-            work_modes = WorkModes(args.force, args.purge_unused, args.fatal_errors, args.assume_yes, args.simulate)
+            work_modes = WorkModes(args.remove_dependencies, args.force, args.purge_unused, args.fatal_errors,
+                                   args.assume_yes, args.simulate)
             # TODO: Use "apt.progress.FetchProgress()" when it has been implemented
             progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
             runner = ModificationRunner(user_id, display_modes, work_modes, consoleui.ErrorHandlers(), consoleui.Applying(),
