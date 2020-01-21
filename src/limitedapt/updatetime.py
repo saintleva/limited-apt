@@ -81,5 +81,5 @@ class UpdateTimes:
             enclosure_element = root.find("enclosure")
             self.enclosure = str_to_time(enclosure_element.get("time"))
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:
-            raise UpdateTimesImportSyntaxError("Syntax error has been appeared during importing"
+            raise UpdateTimesImportSyntaxError("Syntax error has been appeared during importing "
                                                "last time of updating from xml: " + str(err))

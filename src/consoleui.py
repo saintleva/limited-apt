@@ -167,11 +167,11 @@ class ErrorHandlers(Modded):
         print('''Error: package "{0}" which you want to {1} is not installed'''.
               format(self.modes.pkg_str(pkg), action_dict[why_must_be]))
         
-    def may_not_remove(self, pkg, is_root=False, sole_owns=False):
+    def may_not_remove(self, pkg, is_root=False, suggest_to_remove_deps=False):
         print('''Error: you may not remove package "{0}" because you have not permissions to remove packages other than packages '''
               '''you have installed later'''.format(self.modes.pkg_str(pkg)), end='')
         if self.modes.verbose:
-            if sole_owns:
+            if suggest_to_remove_deps:
                 print('''. In order to remove packages you have not specified to remove explicitly '''
                       '''(and you have installed them later) use "--remove-dependencies" option''', end='')
                 if is_root:

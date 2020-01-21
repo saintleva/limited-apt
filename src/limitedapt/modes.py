@@ -53,6 +53,10 @@ class WorkModes:
         self.__simulate = simulate
 
     @property
+    def remove_dependencies(self):
+        return self.__remove_dependencies
+
+    @property
     def force(self):
         return self.__force
 

@@ -377,10 +377,10 @@ class ModificationRunner(RunnerBase):
                     else:
                         if self.username == "root":
                             if coownership.is_any_user_own(concrete_package):
-                                self.handlers.may_not_remove(pkg, is_root=True, sole_owns=sole_owns)
+                                self.handlers.may_not_remove(pkg, is_root=True, suggest_to_remove_deps=sole_owns)
                                 check_fatal()
                         else:
-                            self.handlers.may_not_remove(pkg, sole_owns=sole_owns)
+                            self.handlers.may_not_remove(pkg, suggest_to_remove_deps=sole_owns)
                             check_fatal()
                 if pkg.is_inst_broken and not pkg.is_now_broken:
                     if self.modes.force:
