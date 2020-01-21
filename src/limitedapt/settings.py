@@ -74,7 +74,7 @@ class MinimalFreeSpace:
         self.usr = 0
 
 
-class Settings:
+class Settings: asd
 
     def __init__(self):
         self.urls = Urls()
