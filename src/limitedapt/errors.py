@@ -23,8 +23,10 @@ class Error(Exception):
     
 class StubError(Error):
     '''Used for code stubs'''
+
+class DataError(Error): pass
     
-class XmlImportSyntaxError(Error):
+class XmlImportSyntaxError(DataError):
     '''Syntax or semantic error while limited-apt structures xml parsing'''
 
 class TerminationError(Error):
@@ -83,16 +85,26 @@ class GroupNotExistError(TerminationError, GroupProblem):
     def __init__(self, group_name):
         GroupProblem.__init__(group_name)
 
-class FileIOError(TerminationError):
+class FileError(TerminationError):
     
-    def __init__(self, filename, error_number):
+    def __init__(self, filename):
         self.__filename = filename
-        self.__error_number = error_number
-        
+
     @property
     def filename(self):
         return self.__filename
-                
+
+class FileNotExist(FileError):
+
+    def __init__(self, filename):
+        super().__init__(filename)
+
+class FileIOError(FileError):
+
+    def __init__(self, filename, error_number):
+        super().__init__(filename)
+        self.__error_number = error_number
+
     @property
     def error_number(self):
         return self.__error_number

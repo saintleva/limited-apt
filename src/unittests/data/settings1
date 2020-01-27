@@ -1,8 +1,9 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <settings>
-    <urls enclosure-debug-mode="False">
-        <enclosure url="https://www.github.com/saintleva/limited-apt/data/enclosure">
-        <debconf-priorities url="https://www.github.com/saintleva/limited-apt/data/debconf-priorities">
+    <urls>
+        <enclosure filename="1" url="https://www.github.com/saintleva/limited-apt/data/enclosure1"/>
+        <enclosure filename="2" url="https://www.github.com/saintleva/limited-apt/data/enclosure2"/>
+        <debconf-priorities url="https://www.github.com/saintleva/limited-apt/data/debconf-priorities"/>
     </urls>
     <minimal-free-space>
         <apt-archives amount="5GiB" />

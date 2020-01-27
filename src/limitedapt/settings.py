@@ -16,69 +16,114 @@
 #
 
 from lxml import etree
+from .errors import DataError
+
+
+class SettingsImportError(DataError): pass
+
+class NoEnclosureSpecified(SettingsImportError): pass
+
+class BadSpaceAmount(SettingsImportError): pass
+
+
+class EnclosureRecord:
+
+    def __init__(self, filename, url):
+        self.filename = filename
+        self.url = url
 
 
 class Urls:
 
     def __init__(self):
         self.enclosure_debug_mode = False
-        self.enclosure = ""
+        self.enclosures = []
         self.debconf_priorities = ""
 
+    def export_to_xml_element(self, parent):
+        base_element = etree.SubElement(parent, "urls", {"enclosure-debug-mode" : False})
+        for enclosure in self.enclosures:
+            etree.SubElement(base_element, "enclosure", filename=enclosure.filename, url=enclosure.url)
+        etree.SubElement(base_element, "debconf-priorities", url=self.debconf_priorities)
+
     def import_from_xml_element(self, base_element):
-        self.enclosure_debug_mode = bool(base_element.get("enclosure-debug-mode"))
-        self.enclosure = base_element.find("enclosure").get("url")
+        self.enclosure_debug_mode = bool(base_element.get("enclosure-debug-mode")) or False
+        for enclosure_element in base_element.findall("enclosure"):
+            self.enclosures.append(EnclosureRecord(enclosure_element.get("filename"), enclosure_element.get("url")))
+        if not self.enclosure_debug_mode and not self.enclosures:
+            raise NoEnclosureSpecified("No enclosure specified")
         self.debconf_priorities = base_element.find("debconf-priorities").get("url")
 
 
 class SpaceAmount:
 
-    def __init__(self, is_relative, number):
-        self.is_relative = is_relative
-        self.number = number
+    def __init__(self, is_relative = None, number = None):
+        self.is_relative = is_relative or False
+        self.number = number or 0
 
     def less_or_equal_to_other(self, remaining_space, all_space):
         return self.number * all_space <= remaining_space if self.is_relative else self.number <= remaining_space
 
+    def __str__(self):
+        return "%.2f" % (number * 100) + "%" if self.is_relative else number + "B"
+
     @staticmethod
     def from_string(string):
-        if string.endswith("%"):
-            return SpaceAmount(True, float(string[:-1]) / 100)
-        elif string.endswith("B"):
-            return SpaceAmount(False, int(string[:-1]))
-        elif string.endswith("KB"):
-            return SpaceAmount(False, 1000 * int(string[:-2]))
-        elif string.endswith("KiB"):
-            return SpaceAmount(False, 2 ** 10 * int(string[:-3]))
-        elif string.endswith("MB"):
-            return SpaceAmount(False, 1000_1000 * int(string[:-2]))
-        elif string.endswith("MiB"):
-            return SpaceAmount(False, 2 ** 20 * int(string[:-3]))
-        elif string.endswith("MB"):
-            return SpaceAmount(False, 1000_1000 * int(string[:-2]))
-        elif string.endswith("MiB"):
-            return SpaceAmount(False, 2 ** 20 * int(string[:-3]))
-        elif string.endswith("GB"):
-            return SpaceAmount(False, 1000_1000_1000 * int(string[:-2]))
-        elif string.endswith("GiB"):
-            return SpaceAmount(False, 2 ** 30 * int(string[:-3]))
-        elif string.endswith("TB"):
-            return SpaceAmount(False, 1000_1000_1000_1000 * int(string[:-2]))
-        elif string.endswith("TiB"):
-            return SpaceAmount(False, 2 ** 40 * int(string[:-3]))
+        try:
+            if string.endswith("%"):
+                return SpaceAmount(True, float(string[:-1]) / 100)
+            elif string.endswith("B"):
+                return SpaceAmount(False, int(string[:-1]))
+            elif string.endswith("KB"):
+                return SpaceAmount(False, 1000 * int(string[:-2]))
+            elif string.endswith("KiB"):
+                return SpaceAmount(False, 2 ** 10 * int(string[:-3]))
+            elif string.endswith("MB"):
+                return SpaceAmount(False, 1000_000 * int(string[:-2]))
+            elif string.endswith("MiB"):
+                return SpaceAmount(False, 2 ** 20 * int(string[:-3]))
+            elif string.endswith("GB"):
+                return SpaceAmount(False, 1000_000_000 * int(string[:-2]))
+            elif string.endswith("GiB"):
+                return SpaceAmount(False, 2 ** 30 * int(string[:-3]))
+            elif string.endswith("TB"):
+                return SpaceAmount(False, 1000_000_000_000 * int(string[:-2]))
+            elif string.endswith("TiB"):
+                return SpaceAmount(False, 2 ** 40 * int(string[:-3]))
+            else:
+                raise BadSpaceAmount('String "{0}" cannot be a space amount'.format(string))
+        except:
+            raise BadSpaceAmount('String "{0}" cannot be a space amount'.format(string))
 
 class MinimalFreeSpace:
 
     def __init__(self):
-        self.apt_archives = 0
-        self.usr = 0
+        self.apt_archives = SpaceAmount()
+        self.usr = SpaceAmount()
+
+    def export_to_xml_element(self, parent):
+        base_element = etree.SubElement(parent, "minimal-free-space")
+        etree.SubElement(base_element, "apt-archives", amount=str(self.apt_archives))
+        etree.SubElement(base_element, "usr", amount=str(self.usr))
+
+    def import_from_xml_element(self, base_element):
+        self.apt_archives = SpaceAmount.from_string(base_element.find("apt-archives").get("amount"))
+        self.usr = SpaceAmount.from_string(base_element.find("usr").get("amount"))
 
 
-class Settings: asd
+class Settings:
 
     def __init__(self):
         self.urls = Urls()
         self.minimal_free_space = MinimalFreeSpace()
+        self.updatetime_module = None
+
+    def export_to_xmo(self, file):
+        root = etree.Element("settings")
+        tree = etree.ElementTree(root)
+        self.urls.export_to_xml_element(root)
+        self.minimal_free_space.export_to_xml_element(root)
+        tree.write(file, pretty_print=True, encoding="UTF-8", xml_declaration=True)
 
     def import_from_xml(self, file):
         try:
@@ -86,5 +131,4 @@ class Settings: asd
             self.urls.import_from_xml_element(root.find("urls"))
             self.minimal_free_space.import_from_xml_element(root.find("minimal-free-space"))
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:
-            raise UpdateTimesImportSyntaxError("Syntax error has been appeared during importing "
-                                               "program settings from xml: " + str(err))
+            raise SettingsImportError("Syntax error has been appeared during importing program settings from xml: " + str(err))

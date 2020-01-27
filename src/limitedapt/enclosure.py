@@ -200,3 +200,15 @@ class Enclosure:
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:
             raise EnclosureImportSyntaxError('''Syntax error has been appeared during importing 
                                              enclosure structure from xml: ''' + str(err))
+
+
+class MixedEnclosure:
+
+    def __init__(self, *enclosures):
+        self.enclosures = [enclosure for enclosure in enclosures]
+
+    def __contains__(self, package):
+        for enclosure in self.enclosures:
+            if package in enclosure:
+                return True
+        return False

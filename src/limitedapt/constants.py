@@ -22,6 +22,7 @@ UNIX_LIMITEDAPT_GROUPNAME = 'limited-apt'
 UNIX_LIMITEDAPT_ROOTS_GROUPNAME = 'limited-apt-roots'
 UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME = 'limited-apt-upgraders'
 
+
 PATH_TO_PROGRAM_VARIABLE = "/var/lib/limited-apt/"
 UNCOMPLETED_TASKS_FILENAME = "uncompleted-tasks"
 PATH_TO_UMCOMPLETED_TASKS = os.path.join(PATH_TO_PROGRAM_VARIABLE, UNCOMPLETED_TASKS_FILENAME)
@@ -31,6 +32,6 @@ PACKED_IN_DEB = False
 if PACKED_IN_DEB:
     PATH_TO_PROGRAM_CONFIG = "/etc/limited-apt/"
 else:
-    PATH_TO_PROGRAM_CONFIG = "/usr/local/etc/limited-apt/"
+    PATH_TO_PROGRAM_CONFIG =
 
 #ENCLOSURE_BY_DEBTAGS_DEBUG = True

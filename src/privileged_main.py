@@ -24,6 +24,7 @@ import sys
 import argparse
 import apt.progress.base
 import apt.progress.text
+from limitedapt.settings import *
 from limitedapt.tasks import *
 from limitedapt.errors import *
 from limitedapt.updatetime import *
@@ -171,6 +172,28 @@ def privileged_main():
     display_modes = DisplayModes(args.show_arch, args.verbose, args.debug)
 
     try:
+        executable_name = sys.argv[0]
+        if executable_name.startswith("/usr/local/"):
+            path_to_program_config = "/usr/local/etc/limited-apt/"
+        else:
+            path_to_program_config = "/etc/limited-apt/"
+
+        settings = Settings()
+
+        try:
+            settings.import_from_xml(os.path.join(path_to_program_config, "settings"))
+        except NoEnclosureSpecified:
+            print_error('''Error: no enclosure specified in the settings file''')
+            sys.exit(ExitCodes.SETTINGS_FILE_ERROR.value)
+        except BadSpaceAmount:
+            print_error('''Error: bad space amount in the settings file''')
+            sys.exit(ExitCodes.SETTINGS_FILE_ERROR.value)
+
+        updatetime_filename = os.path.join(constants.updatetime_filename, "updating.py")
+        spec = importlib.util.spec_from_file_location("updating", updatetime_filename)
+        settings.updatetime_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(settings.updatetime_module)
+
         if args.subcommand in operation_subcommands_dics() | {'safe-upgrade', 'full-upgrade', 'diverse', 'fix-interrupted'}:
             work_modes = WorkModes(args.remove_dependencies, args.force, args.purge_unused, args.fatal_errors,
                                    args.assume_yes, args.simulate)
@@ -251,12 +274,18 @@ def privileged_main():
     except GroupNotExistError as err:
         print_error('''Error: "{0}" group doesn't exist'''.format(err.group_name))
         sys.exit(ExitCodes.GROUP_NOT_EXIST.value)
+    except FileNotExist as err:
+        print_error('''Error: file "{0}" doesn't exist'''.format(err.filename))
+        sys.exit(ExitCodes.FILE_NOT_EXIST.value)
     except ReadingVariableFileError as err:
         print_error('''Error number "{0}" appeared while reading file "{1}"'''.format(err.error_number, err.filename))
         sys.exit(ExitCodes.ERROR_WHILE_READING_VARIABLE_FILE.value)
     except WritingVariableFileError as err:
         print_error('''Error number "{0}" appeared while writing to file "{1}"'''.format(err.error_number, err.filename))
         sys.exit(ExitCodes.ERROR_WHILE_WRITING_VARIABLE_FILE.value)
+    except settings.SettingsImportError:
+        print_error('Error while parsing program settings')
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_SETTINGS.value)
     except EnclosureImportSyntaxError:
         print_error('Error while parsing enclosure')
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_VARIABLE_FILE.value)
@@ -287,7 +316,7 @@ def privileged_main():
     except NothingInterruptedError:
         print_error('Error: nothing to fix')
         if display_modes.wordy():
-            print(''''{0}' is good. Nothing has been interrupapt.ted'''.format(PROGRAM_NAME))
+            print(''''{0}' is good. Nothing has been interrupaptted'''.format(PROGRAM_NAME))
         sys.exit(ExitCodes.NOTHING_INTERRUPTED.value)
     except (YouMayNotFixInterruptedError, YouMayNotIgnoreInterruptedError):
         print_error('''Error: only root is able to use "fix-interrupted" and "ignore-interrupted" subcommands''')

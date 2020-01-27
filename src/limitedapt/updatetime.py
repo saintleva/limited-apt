@@ -29,6 +29,7 @@ class UpdateTimes:
     def __init__(self):
         self.__distro = None
         self.__enclosure = None
+        self.__priorities = None
 
     @property
     def distro(self):
@@ -58,6 +59,14 @@ class UpdateTimes:
     def enclosure(self, enclosure):
         self.__enclosure = enclosure
 
+    @property
+    def priorities(self):
+        return self.__enclosure
+
+    @priorities.setter
+    def enclosure(self, priorities):
+        self.__priorities = priorities
+
     def export_to_xml(self, file):
 
         def time_to_str(time):
@@ -66,6 +75,7 @@ class UpdateTimes:
         root = etree.Element("updatetime")
         etree.SubElement(root, "distro", time=time_to_str(self.distro))
         etree.SubElement(root, "enclosure", time=time_to_str(self.enclosure))
+        etree.SubElement(root, "priorities", time=time_to_str(self.priorities))
         tree = etree.ElementTree(root)
         tree.write(file, pretty_print=True, encoding="UTF-8", xml_declaration=True)
 
@@ -80,6 +90,8 @@ class UpdateTimes:
             self.distro = str_to_time(distro_element.get("time"))
             enclosure_element = root.find("enclosure")
             self.enclosure = str_to_time(enclosure_element.get("time"))
+            priorities_element = root.find("priorities")
+            self.priorities = str_to_time(priorities_element.get("time"))
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:
             raise UpdateTimesImportSyntaxError("Syntax error has been appeared during importing "
                                                "last time of updating from xml: " + str(err))

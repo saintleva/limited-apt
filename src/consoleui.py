@@ -246,7 +246,11 @@ class ErrorHandlers(Modded):
         print('''Warning: you should run "{0} update" before in order to update enclosure, which {1}'''.
               format(PROGRAM_NAME, ErrorHandlers.__last_update_str(last_update)))
 
-#TODO: remove it
+    def priorities_updating_warning(self, last_update):
+        print('''Warning: you should run "{0} update" before in order to update debconf priorities list, which {1}'''.
+              format(PROGRAM_NAME, ErrorHandlers.__last_update_str(last_update)))
+
+    #TODO: remove it
 #    def simple_markauto(self, pkg):
 #        if self.modes.verbose:
 #            print('''No simple user has marked package "{0}" automatically installed therefore physical "markauto" '''

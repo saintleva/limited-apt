@@ -62,7 +62,8 @@ class Progresses:
 
 class RunnerBase:
 
-    def __init__(self, user_id, display_modes, debug_stream):
+    def __init__(self, settings, user_id, display_modes, debug_stream):
+        self.__settings = settings
         self.__display_modes = display_modes
         self.__debug_stream = debug_stream
 
@@ -76,6 +77,10 @@ class RunnerBase:
 
         self.__username = effective_username(user_id)
         self._check_user_privileges()
+
+    @property
+    def settings(self):
+        return self.__settings
 
     @property
     def display_modes(self):
@@ -137,21 +142,30 @@ class RunnerBase:
             raise WritingVariableFileError(filename, err.errno)
 
     def _load_enclosure(self):
-        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'enclosure')
-        self._debug_message('''loading non-system package set (enclosure) from file "{0}" ...'''.
-                            format(filename))
-        try:
-            enclosure = Enclosure()
-            enclosure.import_from_xml(filename)
-            return enclosure
-        except IOError as err:
-            raise ReadingVariableFileError(filename, err.errno)
 
+        def load_single(filename):
+            self._debug_message('''loading non-system package set (enclosure) from file "{0}" ...'''.
+                                format(filename))
+            if not os.path.exists(filename):
+                raise FileNotExist(filename)
+            try:
+                enclosure = Enclosure()
+                enclosure.import_from_xml(filename)
+                return enclosure
+            except IOError as err:
+                raise ReadingVariableFileError(filename, err.errno)
+            return enclosure
+
+        if self.settings.urls.enclosure_debug_mode:
+            self.enclosure = load_single(os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, "enclosure"))
+        else:
+            enclosures = [load_single(record.filename + ".enclosure") for record in self.settings.urls.enclosures]
+            self.enclosure = MixedEnclosure(enclosures*)
 
 class UpdationRunner(RunnerBase):
 
-    def __init__(self, user_id, display_modes, fetch_progress, debug_stream):
-        super().__init__(user_id, display_modes, debug_stream)
+    def __init__(self, settings, user_id, display_modes, fetch_progress, debug_stream):
+        super().__init__(settings, user_id, display_modes, debug_stream)
         if not self.has_privileges:
             raise YouMayNotUpdateError(constants.UNIX_LIMITEDAPT_GROUPNAME)
         self.__fetch_progress = fetch_progress
@@ -194,8 +208,8 @@ class UpdationRunner(RunnerBase):
 
 class PrintRunner(RunnerBase):
 
-    def __init__(self, user_id, display_modes, debug_stream):
-        super().__init__(user_id, display_modes, debug_stream)
+    def __init__(self, settings, user_id, display_modes, debug_stream):
+        super().__init__(settings, user_id, display_modes, debug_stream)
 
     def get_list_of_mine(self):
         coownership_list = self._load_coownership_list()
@@ -239,13 +253,13 @@ class PrintRunner(RunnerBase):
 
 class ModificationRunner(RunnerBase):
 
-    def __init__(self, user_id, display_modes, work_modes, handlers, applying_ui, progresses, debug_stream):
+    def __init__(self, settings, user_id, display_modes, work_modes, handlers, applying_ui, progresses, debug_stream):
         if get_cache().dpkg_journal_dirty:
             raise DpkgJournalDirtyError()
         if os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
             raise PrecedingTasksHasNotBeenCompletedError()
         self.__work_modes = work_modes
-        super().__init__(user_id, display_modes, debug_stream)
+        super().__init__(settings, user_id, display_modes, debug_stream)
         self.__handlers = handlers
         self.__handlers.modes = display_modes
         self.__applying_ui = applying_ui
@@ -302,18 +316,16 @@ class ModificationRunner(RunnerBase):
 
     def __check_updating(self):
         update_times = self.__load_update_times()
-        filename = os.path.join(constants.PATH_TO_PROGRAM_CONFIG, 'updating.py')
-        spec = importlib.util.spec_from_file_location("updating", filename)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
         distro_updated_time = update_times.effective_distro()
-        if module.is_distro_update_needed(distro_updated_time):
+        if self.settings.updatetime_module.is_distro_update_needed(distro_updated_time):
             if self.username == "root" and self.work_modes.force:
                 self.handlers.distro_updating_warning(distro_updated_time)
             else:
                 raise DistroHasNotBeenUpdated(distro_updated_time)
-        if module.is_enclosure_update_needed(update_times.enclosure):
+        if self.settings.updatetime_module.is_enclosure_update_needed(update_times.enclosure):
             self.handlers.enclosure_updating_warning(update_times.enclosure)
+        if self.settings.updatetime_module.is_priorities_update_needed(update_times.priorities):
+            self.handlers.priorities_updating_warning(update_times.priorities)
 
     # TODO: Do I really need it?
     def __load_program_options(self):
