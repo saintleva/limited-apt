@@ -17,26 +17,27 @@
 
 import enum
 from lxml import etree
-from limitedapt.errors import *
+from limitedapt.errors import Error
 
 
 class DebconfError(Error): pass
+
 
 class PackageAlreadyAdded(DebconfError): pass
 
 
 def invert_dict(map):
-    return { value, key for key, value in map }
+    return {value: key for key, value in map.items()}
 
 
 PRIORITY_STR_MAP = {
-    0 : "low",
-    1 : "medium",
-    2 : "high",
-    3 : "critical"
+    0: "low",
+    1: "medium",
+    2: "high",
+    3: "critical"
 }
 
-PRIORITY_REVERSE_STR_MAP = invert_dict(PRIORITY_STR_MAP)
+REVERSE_PRIORITY_STR_MAP = invert_dict(PRIORITY_STR_MAP)
 
 class Priority(enum.Enum):
     LOW = 0
@@ -44,41 +45,52 @@ class Priority(enum.Enum):
     HIGH = 2
     CRITICAL = 3
 
+    def __str__(self):
+        return PRIORITY_STR_MAP[self.value]
+
+    @staticmethod
+    def from_string(string):
+        return Priority(REVERSE_PRIORITY_STR_MAP[string])
+
 
 STATUS_STR_MAP = {
-    0 : "has-questions",
-    1 : "has-not-questions",
-    2 : "no-config-file",
-    3 : "not-processed",
+    0: "has-questions",
+    1: "has-not-questions",
+    2: "no-config-file",
+    3: "not-processed",
+    4: "processing-errors"
 }
 
-STATUS_REVERSE_STR_MAP = invert_dict(STATUS_STR_MAP)
+REVERSE_STATUS_STR_MAP = invert_dict(STATUS_STR_MAP)
 
 class Status(enum.Enum):
-
     HAS_QUESTIONS = 0
     HAS_NOT_QUESTIONS = 1
     NO_CONFIG_FILE = 2
-    HAVED_NOT_BEEN_PROCESSED = 3
+    HAVE_NOT_BEEN_PROCESSED = 3
 
     def __str__(self):
         return STATUS_STR_MAP[self.value]
 
-def status_from_string(string):
-    return Status(STATUS_REVERSE_STR_MAP[string])
+    @staticmethod
+    def from_string(string):
+        return Status(REVERSE_STATUS_STR_MAP[string])
 
 
 class PackageState:
 
-    def __init__(self, priority, status):
-        self.priority = priority
+    def __init__(self, status, priority):
         self.status = status
+        self.priority = priority
 
 
 class DebconfPriorities:
 
     def __init__(self):
         self.__data = {}
+
+    def clear(self):
+        self.__data.clear()
 
     def add_package(self, package, state):
         if package.name in self.__data:
@@ -87,14 +99,33 @@ class DebconfPriorities:
                 raise PackageAlreadyAdded()
             arch_map[package.architecture] = state
         else:
-            self.__data[package.name] = { package.architecture : state }
+            self.__data[package.name] = {package.architecture: state}
 
     def export_to_xml(self, file):
-        root = etree.Element("packages")
+        root = etree.Element("debconf-priorities")
         for package, archs in sorted(self.__data.items(), key=lambda x: x[0]):
             package_element = etree.SubElement(root, "package", name=package.name)
             for arch, state in sorted(archs):
-                priority_str
-                etree.SubElement(package_element, "arch", name=arch, status=state.status, )
+                priority_str = str(state.priority) if state.status == Status.HAS_QUESTIONS else ""
+                etree.SubElement(package_element, "arch", name=arch, status=str(state.status),
+                                 priority=priority_str)
         tree = etree.ElementTree(root)
         tree.write(file, pretty_print=True, encoding="UTF-8", xml_declaration=True)
+
+    def import_from_xml(self, file):
+        try:
+            root = etree.parse(file).getroot()
+            self.clear()
+            for package_element in root.findall("package"):
+                package_name = package_element.get("name")
+                arch_map = self.__data[package_name] = {}
+                for arch_element in package_element.findall("arch"):
+                    status = Status.from_string(arch_element.get["status"])
+                    if status != Status.HAS_QUESTIONS:
+                        priority = None
+                    else:
+                        priority = Priority.from_string(arch_element.get["priority"])
+                    arch_map[arch_element.get("arch")] = PackageState(status, priority)
+        except (ValueError, LookupError, etree.XMLSyntaxError) as err:
+            raise CoownershipImportSyntaxError('''Syntax error has been appeared during deconf priority table '''
+                                               '''from xml: ''' + str(err))
