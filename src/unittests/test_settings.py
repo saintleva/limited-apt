@@ -23,7 +23,7 @@ from limitedapt.settings import *
 class UpdateTimeTestCase1(unittest.TestCase):
 
     def setUp(self):
-        self.__settings = Settings()
+        self.__settings = Settings("/usr/local/etc/limited-apt/")
         self.__settings.import_from_xml("data/settings1")
 
     def test_1(self):

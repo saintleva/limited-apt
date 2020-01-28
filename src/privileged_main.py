@@ -178,7 +178,7 @@ def privileged_main():
         else:
             path_to_program_config = "/etc/limited-apt/"
 
-        settings = Settings()
+        settings = Settings(path_to_program_config)
 
         try:
             settings.import_from_xml(os.path.join(path_to_program_config, "settings"))
@@ -199,8 +199,8 @@ def privileged_main():
                                    args.assume_yes, args.simulate)
             # TODO: Use "apt.progress.FetchProgress()" when it has been implemented
             progresses = Progresses(None, apt.progress.text.AcquireProgress(), apt.progress.base.InstallProgress())
-            runner = ModificationRunner(user_id, display_modes, work_modes, consoleui.ErrorHandlers(), consoleui.Applying(),
-                                        progresses, sys.stderr)
+            runner = ModificationRunner(settings, user_id, display_modes, work_modes, consoleui.ErrorHandlers(),
+                                        consoleui.Applying(), progresses, sys.stderr)
             if args.subcommand == 'safe-upgrade':
                 runner.upgrade(full_upgrade=False)
             elif args.subcommand == 'full-upgrade':
@@ -226,10 +226,10 @@ def privileged_main():
                         add_unsuffixed_operation_to_tasks(operation, tasks)
                 runner.perform_operations(tasks)
         elif args.subcommand == 'update':
-            runner = UpdationRunner(user_id, display_modes, None, sys.stderr)
+            runner = UpdationRunner(settings, user_id, display_modes, None, sys.stderr)
             runner.update()
         elif args.subcommand in ('print-enclosure', 'list-of-mine', 'owners-of'):
-            runner = PrintRunner(user_id, display_modes, sys.stderr)
+            runner = PrintRunner(settings, user_id, display_modes, sys.stderr)
             if args.subcommand == 'print-enclosure':
                 if display_modes.wordy():
                     print('Packages you ({0}) may install:'.format(runner.username))

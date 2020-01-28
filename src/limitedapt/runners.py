@@ -157,10 +157,15 @@ class RunnerBase:
             return enclosure
 
         if self.settings.urls.enclosure_debug_mode:
-            self.enclosure = load_single(os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, "enclosure"))
+            enclosure = load_single(os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, "enclosure"))
         else:
-            enclosures = [load_single(record.filename + ".enclosure") for record in self.settings.urls.enclosures]
-            self.enclosure = MixedEnclosure(enclosures*)
+            enclosure_list = [load_single(record.filename + ".enclosure") for record in self.settings.urls.enclosures]
+            path_to_local_enclosure = os.path.join(self.settings.path_to_program_config, "local.enclosure")
+            if os.path.exists(path_to_local_enclosure):
+                enclosure_list.append(load_single(path_to_local_enclosure))
+            enclosure = MixedEnclosure(*enclosure_list)
+
+        return enclosure
 
 class UpdationRunner(RunnerBase):
 

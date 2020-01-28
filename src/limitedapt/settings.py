@@ -113,7 +113,8 @@ class MinimalFreeSpace:
 
 class Settings:
 
-    def __init__(self):
+    def __init__(self, path_to_program_config):
+        self.path_to_program_config = path_to_program_config
         self.urls = Urls()
         self.minimal_free_space = MinimalFreeSpace()
         self.updatetime_module = None

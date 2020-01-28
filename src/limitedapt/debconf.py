@@ -49,10 +49,6 @@ class Priority(enum.Enum):
     CRITICAL = 3
 
     def __str__(self):
-        #TODO: debug and remove it
-        if self is None:
-            return "NONE"
-
         return PRIORITY_STR_MAP[self.value]
 
     @staticmethod
@@ -97,6 +93,7 @@ class PackageState:
                 return self.priority == other.priority
             else:
                 return True
+        return False
 
 
 class DebconfPriorities:
@@ -114,26 +111,27 @@ class DebconfPriorities:
                 raise PackageAlreadyAdded()
             arch_map[package.architecture] = state
         else:
-            self.__data[package.name] = {package.architecture: state}
+            self.__data[package.name] = {package.architecture : state}
 
     def get_state(self, package):
         try:
-            print(package)
             self.__data[package.name][package.architecture]
         except KeyError:
             raise PackageNotInStructure()
 
+    #TODO: debug and remove it
+    def print_table(self):
+        for package_name, archs in self.__data.items():
+            print(package_name)
+            for arch, state in archs.items():
+                print('    arch {0}: {1}'.format(arch, state.status))
+
     def export_to_xml(self, file):
         root = etree.Element("debconf-priorities")
-        for package, archs in sorted(self.__data.items(), key=lambda x: x[0]):
-            package_element = etree.SubElement(root, "package", name=package)
+        for package_name, archs in sorted(self.__data.items(), key=lambda x: x[0]):
+            package_element = etree.SubElement(root, "package", name=package_name)
             for arch, state in sorted(archs.items(), key=lambda x: x[0]):
-                priority_str = str(state.priority) if state.status == Status.HAS_QUESTIONS else ""
                 if state.status == Status.HAS_QUESTIONS:
-
-                    #TODO: debug and remove it
-                    print(state.priority)
-
                     etree.SubElement(package_element, "arch", name=arch, status=str(state.status),
                                      priority=str(state.priority))
                 else:
@@ -142,21 +140,21 @@ class DebconfPriorities:
         tree.write(file, pretty_print=True, encoding="UTF-8", xml_declaration=True)
 
     def import_from_xml(self, file):
-#        try:
-        root = etree.parse(file).getroot()
-        self.clear()
-        for package_element in root.findall("package"):
-            package_name = package_element.get("name")
-            if package_name not in self.__data:
-                self.__data[package_name] = {}
-            arch_map = self.__data[package_name]
-            for arch_element in package_element.findall("arch"):
-                status = Status.from_string(arch_element.get("status"))
-                if status == Status.HAS_QUESTIONS:
-                    priority = Priority.from_string(arch_element.get("priority"))
-                else:
-                    priority = None
-                arch_map[arch_element.get("arch")] = PackageState(status, priority)
-#        except (ValueError, LookupError, etree.XMLSyntaxError) as err:
-#            raise DebconfPrioritiesImportSyntaxError(
-#               '''Syntax error has been appeared during deconf priority table from xml: ''' + str(err))
+        try:
+            root = etree.parse(file).getroot()
+            self.clear()
+            for package_element in root.findall("package"):
+                package_name = package_element.get("name")
+                if package_name not in self.__data:
+                    self.__data[package_name] = {}
+                arch_map = self.__data[package_name]
+                for arch_element in package_element.findall("arch"):
+                    status = Status.from_string(arch_element.get("status"))
+                    if status == Status.HAS_QUESTIONS:
+                        priority = Priority.from_string(arch_element.get("priority"))
+                    else:
+                        priority = None
+                    arch_map[arch_element.get("name")] = PackageState(status, priority)
+        except (ValueError, LookupError, etree.XMLSyntaxError) as err:
+            raise DebconfPrioritiesImportSyntaxError(
+               '''Syntax error has been appeared during deconf priority table from xml: ''' + str(err))

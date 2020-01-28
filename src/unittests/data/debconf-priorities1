@@ -1,21 +1,21 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <debconf-priorities>
-    <package name="3dchess">
-        <arch name="i386" status="has-questions" priority="low" />
-        <arch name="amd64" status="has-questions" priority="medium" />
-        <arch name="armel" status="has-questions" priority="high" />
-    </package>
-    <package name="abe">
-        <arch name="i386" status="has-questions" priority="critical" />
-        <arch name="amd64" status="has-questions" priority="critical" />
-        <arch name="armel" status="has-not-questions" priority="" />
-    </package>
-    <package name="ace-of-penguins">
-        <arch name="i386" status="no-config-file"/>
-        <arch name="amd64" status="not-processed"/>
-        <arch name="armel" status="processing-error"/>
-    </package>
-    <package name="adonthell-data">
-        <arch name="all" status="has-questions" priority="low"/>
-    </package>
+  <package name="3dchess">
+    <arch name="amd64" status="has-questions" priority="medium"/>
+    <arch name="armel" status="has-questions" priority="high"/>
+    <arch name="i386" status="has-questions" priority="low"/>
+  </package>
+  <package name="abe">
+    <arch name="amd64" status="has-questions" priority="critical"/>
+    <arch name="armel" status="has-not-questions"/>
+    <arch name="i386" status="has-questions" priority="critical"/>
+  </package>
+  <package name="ace-of-penguins">
+    <arch name="amd64" status="not-processed"/>
+    <arch name="armel" status="processing-error"/>
+    <arch name="i386" status="no-config-file"/>
+  </package>
+  <package name="adonthell-data">
+    <arch name="all" status="has-questions" priority="low"/>
+  </package>
 </debconf-priorities>
