@@ -22,8 +22,11 @@ from limitedapt.errors import Error
 
 class DebconfError(Error): pass
 
-
 class PackageAlreadyAdded(DebconfError): pass
+
+class PackageNotInStructure(DebconfError): pass
+
+class DebconfPrioritiesImportSyntaxError(DebconfError): pass
 
 
 def invert_dict(map):
@@ -46,6 +49,10 @@ class Priority(enum.Enum):
     CRITICAL = 3
 
     def __str__(self):
+        #TODO: debug and remove it
+        if self is None:
+            return "NONE"
+
         return PRIORITY_STR_MAP[self.value]
 
     @staticmethod
@@ -58,7 +65,7 @@ STATUS_STR_MAP = {
     1: "has-not-questions",
     2: "no-config-file",
     3: "not-processed",
-    4: "processing-errors"
+    4: "processing-error"
 }
 
 REVERSE_STATUS_STR_MAP = invert_dict(STATUS_STR_MAP)
@@ -68,6 +75,7 @@ class Status(enum.Enum):
     HAS_NOT_QUESTIONS = 1
     NO_CONFIG_FILE = 2
     HAVE_NOT_BEEN_PROCESSED = 3
+    PROCESSING_ERROR = 4
 
     def __str__(self):
         return STATUS_STR_MAP[self.value]
@@ -82,6 +90,13 @@ class PackageState:
     def __init__(self, status, priority):
         self.status = status
         self.priority = priority
+
+    def __eq__(self, other):
+        if self.status == other.status:
+            if self.status == Status.HAS_QUESTIONS:
+                return self.priority == other.priority
+            else:
+                return True
 
 
 class DebconfPriorities:
@@ -101,31 +116,47 @@ class DebconfPriorities:
         else:
             self.__data[package.name] = {package.architecture: state}
 
+    def get_state(self, package):
+        try:
+            print(package)
+            self.__data[package.name][package.architecture]
+        except KeyError:
+            raise PackageNotInStructure()
+
     def export_to_xml(self, file):
         root = etree.Element("debconf-priorities")
         for package, archs in sorted(self.__data.items(), key=lambda x: x[0]):
-            package_element = etree.SubElement(root, "package", name=package.name)
-            for arch, state in sorted(archs):
+            package_element = etree.SubElement(root, "package", name=package)
+            for arch, state in sorted(archs.items(), key=lambda x: x[0]):
                 priority_str = str(state.priority) if state.status == Status.HAS_QUESTIONS else ""
-                etree.SubElement(package_element, "arch", name=arch, status=str(state.status),
-                                 priority=priority_str)
+                if state.status == Status.HAS_QUESTIONS:
+
+                    #TODO: debug and remove it
+                    print(state.priority)
+
+                    etree.SubElement(package_element, "arch", name=arch, status=str(state.status),
+                                     priority=str(state.priority))
+                else:
+                    etree.SubElement(package_element, "arch", name=arch, status=str(state.status))
         tree = etree.ElementTree(root)
         tree.write(file, pretty_print=True, encoding="UTF-8", xml_declaration=True)
 
     def import_from_xml(self, file):
-        try:
-            root = etree.parse(file).getroot()
-            self.clear()
-            for package_element in root.findall("package"):
-                package_name = package_element.get("name")
-                arch_map = self.__data[package_name] = {}
-                for arch_element in package_element.findall("arch"):
-                    status = Status.from_string(arch_element.get["status"])
-                    if status != Status.HAS_QUESTIONS:
-                        priority = None
-                    else:
-                        priority = Priority.from_string(arch_element.get["priority"])
-                    arch_map[arch_element.get("arch")] = PackageState(status, priority)
-        except (ValueError, LookupError, etree.XMLSyntaxError) as err:
-            raise CoownershipImportSyntaxError('''Syntax error has been appeared during deconf priority table '''
-                                               '''from xml: ''' + str(err))
+#        try:
+        root = etree.parse(file).getroot()
+        self.clear()
+        for package_element in root.findall("package"):
+            package_name = package_element.get("name")
+            if package_name not in self.__data:
+                self.__data[package_name] = {}
+            arch_map = self.__data[package_name]
+            for arch_element in package_element.findall("arch"):
+                status = Status.from_string(arch_element.get("status"))
+                if status == Status.HAS_QUESTIONS:
+                    priority = Priority.from_string(arch_element.get("priority"))
+                else:
+                    priority = None
+                arch_map[arch_element.get("arch")] = PackageState(status, priority)
+#        except (ValueError, LookupError, etree.XMLSyntaxError) as err:
+#            raise DebconfPrioritiesImportSyntaxError(
+#               '''Syntax error has been appeared during deconf priority table from xml: ''' + str(err))
