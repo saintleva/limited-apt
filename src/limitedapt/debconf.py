@@ -22,7 +22,7 @@ from limitedapt.errors import Error
 
 class DebconfError(Error): pass
 
-class PackageAlreadyAdded(DebconfError): pass
+class BadPackageState(DebconfError): pass
 
 class PackageNotInStructure(DebconfError): pass
 
@@ -60,8 +60,7 @@ STATUS_STR_MAP = {
     0: "has-questions",
     1: "has-not-questions",
     2: "no-config-file",
-    3: "not-processed",
-    4: "processing-error"
+    3: "processing-error"
 }
 
 REVERSE_STATUS_STR_MAP = invert_dict(STATUS_STR_MAP)
@@ -70,8 +69,7 @@ class Status(enum.Enum):
     HAS_QUESTIONS = 0
     HAS_NOT_QUESTIONS = 1
     NO_CONFIG_FILE = 2
-    HAVE_NOT_BEEN_PROCESSED = 3
-    PROCESSING_ERROR = 4
+    PROCESSING_ERROR = 3
 
     def __str__(self):
         return STATUS_STR_MAP[self.value]
@@ -83,7 +81,12 @@ class Status(enum.Enum):
 
 class PackageState:
 
-    def __init__(self, status, priority):
+    def __init__(self, status, priority=None):
+        if status == Status.HAS_QUESTIONS:
+            if priority is None:
+                raise BadPackageState()
+        elif priority is not None:
+            raise BadPackageState()
         self.status = status
         self.priority = priority
 
@@ -104,27 +107,31 @@ class DebconfPriorities:
     def clear(self):
         self.__data.clear()
 
-    def add_package(self, package, state):
+    def __contains__(self, package):
+        if package.name not in self.__data:
+            return False
+        return package.architecture in self.__data[package.name]
+
+    def __getitem__(self, package):
+        try:
+            return self.__data[package.name][package.architecture]
+        except KeyError:
+            raise KeyError(str(package))
+
+    def __setitem__(self, package, state):
         if package.name in self.__data:
-            arch_map = self.__data[package.name]
-            if package.architecture in arch_map:
-                raise PackageAlreadyAdded()
-            arch_map[package.architecture] = state
+            self.__data[package.name][package.architecture] = state
         else:
             self.__data[package.name] = {package.architecture : state}
 
-    def get_state(self, package):
+    def badly_processed(self, package):
         try:
-            self.__data[package.name][package.architecture]
+            return self[package].status == Status.PROCESSING_ERROR
         except KeyError:
             raise PackageNotInStructure()
 
-    #TODO: debug and remove it
-    def print_table(self):
-        for package_name, archs in self.__data.items():
-            print(package_name)
-            for arch, state in archs.items():
-                print('    arch {0}: {1}'.format(arch, state.status))
+    def well_processed(self, package):
+        return package in self and not self.badly_processed(package)
 
     def export_to_xml(self, file):
         root = etree.Element("debconf-priorities")

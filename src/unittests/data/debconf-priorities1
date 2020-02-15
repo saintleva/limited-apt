@@ -11,7 +11,7 @@
     <arch name="i386" status="has-questions" priority="critical"/>
   </package>
   <package name="ace-of-penguins">
-    <arch name="amd64" status="not-processed"/>
+    <arch name="amd64" status="processing-error"/>
     <arch name="armel" status="processing-error"/>
     <arch name="i386" status="no-config-file"/>
   </package>
