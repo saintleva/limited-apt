@@ -111,7 +111,7 @@ def privileged_main():
                                          help='Stop and exit after first error.')
     parent_operation_parser.add_argument('-y', '--assume-yes', action='store_true',
                                          help='When a yes/no prompt would be presented, assume that the user entered “yes”.')
-    parent_operation_parser.add_argument('-s', '--simulate', action='store_true',
+    parent_operation_parser.add_argument('-s', '--simulate',   action='store_true',
                                          help='''Simulate actions, but doesn't actually perform them. \
                                          This doesn't require high privileges (you may not to be a member \
                                          of "{0}" group).'''.format(UNIX_LIMITEDAPT_GROUPNAME))

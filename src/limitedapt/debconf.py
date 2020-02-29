@@ -28,6 +28,12 @@ class PackageNotInStructure(DebconfError): pass
 
 class DebconfPrioritiesImportSyntaxError(DebconfError): pass
 
+class ConvertingFromStringError(DebconfError): pass
+
+class PriorityConvertingFromStringError(ConvertingFromStringError): pass
+
+class StatusConvertingFromStringError(ConvertingFromStringError): pass
+
 
 def invert_dict(map):
     return {value: key for key, value in map.items()}
@@ -51,9 +57,18 @@ class Priority(enum.Enum):
     def __str__(self):
         return PRIORITY_STR_MAP[self.value]
 
+    def __eq__(self, other):
+        return self.value == other.value
+
+    def __lt__(self, other):
+        return self.value < other.value
+
     @staticmethod
     def from_string(string):
-        return Priority(REVERSE_PRIORITY_STR_MAP[string])
+        try:
+            return Priority(REVERSE_PRIORITY_STR_MAP[string])
+        except KeyError:
+            raise PriorityConvertingFromStringError()
 
 
 STATUS_STR_MAP = {
@@ -76,7 +91,10 @@ class Status(enum.Enum):
 
     @staticmethod
     def from_string(string):
-        return Status(REVERSE_STATUS_STR_MAP[string])
+        try:
+            return Status(REVERSE_STATUS_STR_MAP[string])
+        except KeyError:
+            raise StatusConvertingFromStringError()
 
 
 class PackageState:
