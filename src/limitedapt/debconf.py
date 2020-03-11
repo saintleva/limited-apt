@@ -17,6 +17,9 @@
 
 import enum
 from lxml import etree
+from sqlalchemy import Column, types, create_engine
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 from limitedapt.errors import Error
 
 
@@ -62,6 +65,9 @@ class Priority(enum.Enum):
 
     def __lt__(self, other):
         return self.value < other.value
+
+    def __hash__(self):
+        return hash(self.value)
 
     @staticmethod
     def from_string(string):
@@ -183,3 +189,35 @@ class DebconfPriorities:
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:
             raise DebconfPrioritiesImportSyntaxError(
                '''Syntax error has been appeared during deconf priority table from xml: ''' + str(err))
+
+
+Base = declarative_base()
+
+class Record(Base):
+
+    __tablename__ = "priorities"
+
+    fullname = Column(types.String, primary_key=True)
+    status = Column(types.Enum(Status))
+    priority = Column(types.Enum(Priority))
+
+    def __init__(self, fullname, status, priority):
+        self.fullname = fullname
+        self.status = status
+        self.priority = priority
+
+
+class DebconfPrioritiesDB:
+
+    def __init__(self, DBFilename):
+        self.engine = create_engine("sqlite:///" + DBFilename)
+        Base.metadata.create_all(self.engine)
+        Session = sessionmaker(bind=self.engine)
+        self.session = Session()
+
+    def __getitem__(self, package):
+        record = self.session.query(Record).filter_by(fullname=str(package)).first()
+        if record is None:
+            raise KeyError(str(package))
+        else:
+            return PackageState(record.status, record.priority)
