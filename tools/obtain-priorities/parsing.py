@@ -38,7 +38,8 @@ def parse_shell(handle):
 
 
 shell_parser_map = {
-    "/bin/sh" : parse_shell
+    "/bin/sh" : parse_shell,
+    "/bin/bash": parse_shell
 }
 
 

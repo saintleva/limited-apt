@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #
 # Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
 #
@@ -15,25 +16,22 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
-import apt
+import sys
+import time
+from limitedapt.debconf import *
 
 
-def run_once(func):
-    """Runs a function (without parameters) (successfully) only once.
-    The running can be reset by setting the `has_run` attribute to False
-    """
-    @functools.wraps(func)
-    def wrapper():
-        if not wrapper.has_run:
-            wrapper.result = func()
-            wrapper.has_run = True
-        return wrapper.result
-    wrapper.has_run = False
-    return wrapper
+def main():
+    map_priorities = DebconfPriorities()
+    before_xml_import_time = time.time()
+    map_priorities.import_from_xml(sys.argv[1])
+    after_xml_import_time = time.time()
+    print("{0} seconds elapsed for xml importing".format(after_xml_import_time - before_xml_import_time))
+    before_db_create_time = time.time()
+    debconf_priorities_map_to_db(map_priorities, "sqlite:///" + sys.argv[2])
+    after_db_create_time = time.time()
+    print("{0} seconds elapsed for db creating".format(after_db_create_time - before_db_create_time))
 
 
-@run_once
-def get_cache():
-    return apt.Cache()
-
+if __name__ == "__main__":
+    main()

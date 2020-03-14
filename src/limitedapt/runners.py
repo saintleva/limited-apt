@@ -197,6 +197,9 @@ class UpdationRunner(RunnerBase):
         else:
             raise StubError('Real enclosure updating has not implemented yet')
 
+    def update_priorities(self):
+        pass
+
     def update(self):
         cache = get_cache()
         update_times = UpdateTimes()

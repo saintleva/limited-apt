@@ -1,4 +1,3 @@
-#
 # Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
@@ -15,25 +14,13 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-import functools
-import apt
+import pycurl
 
 
-def run_once(func):
-    """Runs a function (without parameters) (successfully) only once.
-    The running can be reset by setting the `has_run` attribute to False
-    """
-    @functools.wraps(func)
-    def wrapper():
-        if not wrapper.has_run:
-            wrapper.result = func()
-            wrapper.has_run = True
-        return wrapper.result
-    wrapper.has_run = False
-    return wrapper
-
-
-@run_once
-def get_cache():
-    return apt.Cache()
-
+def download_file(url, filename):
+    with open(filename, "wb") as fh:
+        curl = pycurl.Curl()
+        curl.setopt(curl.URL, url)
+        curl.setopt(curl.WRITEDATA, fh)
+        curl.perform()
+        curl.close()
