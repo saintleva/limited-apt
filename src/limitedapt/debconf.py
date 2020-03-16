@@ -16,6 +16,7 @@
 #
 
 import enum
+import subprocess
 from lxml import etree
 from sqlalchemy import Column, types, create_engine
 from sqlalchemy.ext.declarative import declarative_base
@@ -37,6 +38,8 @@ class ConvertingFromStringError(DebconfError): pass
 class PriorityConvertingFromStringError(ConvertingFromStringError): pass
 
 class StatusConvertingFromStringError(ConvertingFromStringError): pass
+
+class DebconfshowParsingError(DebconfError): pass
 
 
 def invert_dict(map):
@@ -258,3 +261,16 @@ def debconf_priorities_map_to_db(map_priorities, db_url):
     for package, state in map_priorities.items():
         db[package] = state
     db.commit()
+
+
+def minimal_debconf_priority_to_ask_questions():
+    found = subprocess.getoutput('debconf-show debconf')
+    lines = found.splitlines()
+    for line in lines:
+        words = line.split()
+        if "debconf/priority:" in words:
+            try:
+                return Priority.from_string(words[-1])
+            except PriorityConvertingFromStringError:
+                raise DebconfshowParsingError()
+    raise DebconfshowParsingError()

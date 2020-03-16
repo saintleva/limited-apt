@@ -30,6 +30,7 @@ from limitedapt.errors import *
 from limitedapt.updatetime import *
 from limitedapt.runners import *
 from limitedapt.constants import *
+from limitedapt.debconf import DebconfshowParsingError
 from limitedapt.debug import debug_suidbit
 from exitcodes import ExitCodes
 import consoleui
@@ -271,6 +272,9 @@ def privileged_main():
     except YouMayNotPurgeError:
         print_error('''Error: only root can purge packages and use "--purge-unused" option''')
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
+    except DebconfshowParsingError:
+        print_error('''Error: error while parsing output of "debconf-show debconf" command''')
+        sys.exit(ExitCodes.DEBCONFSHOW_PARSING_ERROR.value)
     except GroupNotExistError as err:
         print_error('''Error: "{0}" group doesn't exist'''.format(err.group_name))
         sys.exit(ExitCodes.GROUP_NOT_EXIST.value)

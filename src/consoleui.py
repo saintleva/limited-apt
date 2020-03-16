@@ -22,6 +22,7 @@ from limitedapt import single
 from limitedapt.constants import *
 from limitedapt.modes import Modded
 from limitedapt.updatetime import UpdateTimes
+from limitedapt.debconf import *
 from metrics import *
 
 
@@ -233,6 +234,10 @@ class ErrorHandlers(Modded):
             print('''No simple user have installed package "{0}" therefore physical removation '''
                   '''is equivalent to simple removation in that case'''.format(self.modes.pkg_str(pkg)))
 
+    def may_not_debconf_configure(self, pkg, package_priority, minimal_priority):
+        print('''Error: package "{0}" has questions at least "{1}" to configure with Debconf but Debconf minimal level is "{2}".'''.
+              format(self.modes.pkg_str(pkg), str(package_priority), str(minimal_priority)))
+
     @staticmethod
     def __last_update_str(last_update):
         return "has not ever been updated" if last_update is None else "was last been updated at: " + \
@@ -249,6 +254,11 @@ class ErrorHandlers(Modded):
     def priorities_updating_warning(self, last_update):
         print('''Warning: you should run "{0} update" before in order to update debconf priorities list, which {1}'''.
               format(PROGRAM_NAME, ErrorHandlers.__last_update_str(last_update)))
+
+    def fixing_interrupted_debconf_configure_warning(self, pkg, package_priority, minimal_priority):
+        print('''Warning: now package "{0}" has questions at least "{1}" to configure with Debconf but Debconf minimal level is "{2}".'''.
+              format(self.modes.pkg_str(pkg), str(package_priority), str(minimal_priority)))
+
 
     #TODO: remove it
 #    def simple_markauto(self, pkg):

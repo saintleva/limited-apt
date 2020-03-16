@@ -35,6 +35,8 @@ from limitedapt.tasks import *
 from limitedapt.changes import *
 from limitedapt.modes import *
 from limitedapt.updatetime import *
+from limitedapt.debconf import *
+from limitedapt.download import *
 
 
 DEBUG = True
@@ -189,16 +191,22 @@ class UpdationRunner(RunnerBase):
             raise WritingVariableFileError(filename, err.errno)
 
     def update_eclosure(self):
-        # TODO: Implement enclosure updating
-        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'enclosure')
-        if DEBUG:
-            self._debug_message('''updating enclosure in the file "{0}" ...'''.format(filename))
+        if self.settings.urls.enclosure_debug_mode:
+            filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'enclosure')
+            self._debug_message('''updating enclosure in the file "{0}" in the debug mode ...'''.format(filename))
             debug.update_enclosure_by_debtags(filename)
         else:
-            raise StubError('Real enclosure updating has not implemented yet')
+            for record in self.settings.urls.enclosures:
+                filename = record.filename + '.enclosure'
+                self._debug_message('''loading enclosure from "{0}" to the file "{1}" ...'''.
+                                    format(record.url, filename))
+                download_file(record.url, filename)
 
     def update_priorities(self):
-        pass
+        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'debconf-priorities.sqlite')
+        url = self.settings.urls.debconf_priorities
+        self._debug_message('''loading debconf priorities from "{0}" to the file "{1}" ...'''.format(url, filename))
+        download_file(url, filename)
 
     def update(self):
         cache = get_cache()
@@ -209,6 +217,8 @@ class UpdationRunner(RunnerBase):
             cache.open(None)  #TODO: Do I really need to re-open the cache here?
             self.update_eclosure() #TODO: Do I need to use 'try' block?
             update_times.enclosure = datetime.now()
+            self.update_priorities()
+            update_times.priorities = datetime.now()
             self.__save_update_times(update_times)
         except apt.cache.FetchFailedException as err:
             raise FetchFailedError(err)
@@ -340,6 +350,37 @@ class ModificationRunner(RunnerBase):
         apt_pkg.init_config()
         self.__default_release = apt_pkg.config["APT::Default-Release"] or None
 
+    def __check_priorities(self, fixing_interrupted=False):
+        filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'debconf-priorities.sqlite')
+        priorities = DebconfPrioritiesDB("sqlite:///" + filename)
+        minimal_priority = minimal_debconf_priority_to_ask_questions()
+        changes = get_cache().get_changes()
+
+        errors = False
+        if fixing_interrupted:
+            def check_fatal():
+                nonlocal errors
+                errors = True
+                if self.work_modes.fatal_errors:
+                    raise SystemComposingByResolverError()
+            def priorities_failure(pkg, package_priority):
+                self.handlers.may_not_debconf_configure(pkg, package_priority, minimal_priority)
+        else:
+            def check_fatal():
+                pass
+            def priorities_failure(pkg, package_priority):
+                self.handlers.fixing_interrupted_debconf_configure_warning(pkg, package_priority, minimal_priority)
+
+        for pkg in sorted(changes):
+            try:
+                state = priorities[ConcretePackage(pkg.shortname, pkg.candidate.architecture)]
+                if state.status == Status.PROCESSING_ERROR:
+
+            except KeyError:
+                priorities_failure(pkg, )
+                check_fatal()
+
+
     def __examine_and_apply_changes(self, tasks, real_tasks, enclosure, coownership):
         cache = get_cache()
         changes = cache.get_changes()
@@ -427,7 +468,8 @@ class ModificationRunner(RunnerBase):
                         else:
                             self.handlers.package_is_not_trusted(pkg)
                             check_fatal()
-            if errors:
+
+            if errors or not self.__check_priorities():
                 raise SystemComposingByResolverError()
 
         if real_tasks.is_empty():
