@@ -153,12 +153,16 @@ class ErrorHandlers(Modded):
             purpose = 'need to install in order to resolve dependencies' if self.byresolver else 'want to install'
             print('''Error: package "{0}" which you {1} is system-constitutive and nobody '''
                   '''but root may install it'''.format(name, purpose))
+
+    def now_install_warning(self, pkg):
+        print('''Warning: this new version ("{1}") of package "{0}" has become system-constitutive now'''.
+              format(self.modes.pkg_str(pkg), pkg.candidate.version))
         
     def may_not_upgrade_to_new(self, pkg, installed_version_also):
         what = "package" if installed_version_also else "this new version"
         print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
               '''{2} is system-constitutive'''.format(self.modes.pkg_str(pkg), pkg.candidate.version, what))
-        
+
     def is_not_installed(self, pkg, why_must_be):
         action_dict = {"remove" : 'remove',
                        "physically-remove" : 'physically remove',
@@ -182,7 +186,10 @@ class ErrorHandlers(Modded):
                 print('''. Despite this you can explicitly physically remove packages using "physically-remove" subcommand''',
                       end='')
         print()
-        
+
+    def now_remove_warning(self, pkg):
+        print('''Warning: package "{0}" must be removed now'''.format(self.modes.pkg_str(pkg)))
+
     def may_not_physically_remove(self, pkg):
         print('''Error: you may not physically remove package "{0}" because only root may do that'''.
               format(self.modes.pkg_str(pkg)))
@@ -199,6 +206,9 @@ class ErrorHandlers(Modded):
     def may_not_downgrade(self):
         print('''Error: cannot downgrade packages. Only root using "--force" option may do that''')
 
+    def now_downgrade_warning(self, pkg):
+        print('''Warning: package "{0}" must be downgraded now'''.format(self.modes.pkg_str(pkg)))
+
     def force_downgrade(self, pkg):
         if self.modes.wordy():
             print('''Forced by root: downgrading package "{0}" to version "{1}"'''.
@@ -207,6 +217,10 @@ class ErrorHandlers(Modded):
     def may_not_keep(self):
         print('''Error: cannot keep packages at their current versions. Only root using "--force" option may do that''')
 
+    def now_keep_warning(self, pkg):
+        print('''Warning: package "{0}" must be be kept at their current versions "{1}" now'''.
+              format(self.modes.pkg_str(pkg), pkg.candidate.version))
+
     def force_keep(self, pkg):
         if self.modes.wordy():
             print('''Forced by root: package "{0}" will be kept at their current versions "{1}"'''.
@@ -214,6 +228,9 @@ class ErrorHandlers(Modded):
 
     def may_not_break(self, pkg):
         print('''Error: your actions make package "{0}" broken'''.format(self.modes.pkg_str(pkg)))
+
+    def now_break_warning(self, pkg):
+        print('''Warning: package "{0}" must be come broken now'''.format(self.modes.pkg_str(pkg)))
 
     def force_break(self, pkg):
         if self.modes.wordy():
@@ -226,6 +243,10 @@ class ErrorHandlers(Modded):
     def package_is_not_trusted(self, pkg):
         print('''Error: package "{0}" is not trusted".'''.format(self.modes.pkg_str(pkg)))
 
+    def now_untrusted_warning(self, pkg):
+        print('''Warning: this new version ("{1}") of package "{0}" is not trusted now'''.
+              format(self.modes.pkg_str(pkg), pkg.candidate.version))
+
     def force_untrusted(self, pkg):
         print('''Forced by root: package "{0}" will be installed although this is not trusted'''.format(self.modes.pkg_str(pkg)))
 
@@ -235,8 +256,18 @@ class ErrorHandlers(Modded):
                   '''is equivalent to simple removation in that case'''.format(self.modes.pkg_str(pkg)))
 
     def may_not_debconf_configure(self, pkg, package_priority, minimal_priority):
-        print('''Error: package "{0}" has questions at least "{1}" to configure with Debconf but Debconf minimal level is "{2}".'''.
+        print('''Error: package "{0}" has questions at least "{1}" to configure with Debconf but Debconf minimal level is "{2}"'''.
               format(self.modes.pkg_str(pkg), str(package_priority), str(minimal_priority)))
+
+    def now_debconf_configure_warning(self, pkg, package_priority, minimal_priority):
+        print('''Warning: package "{0}" has questions at least "{1}" to configure with Debconf but Debconf minimal level is "{2}" now'''.
+              format(self.modes.pkg_str(pkg), str(package_priority), str(minimal_priority)))
+
+    def bad_debconf_configure(self, pkg):
+        print('''Error: Debconf configuration of package "{0}" is unknown'''.format(self.modes.pkg_str(pkg)))
+
+    def now_bad_debconf_configure_warning(self, pkg):
+        print('''Warning: Debconf configuration of package "{0}" has already been unknown'''.format(self.modes.pkg_str(pkg)))
 
     @staticmethod
     def __last_update_str(last_update):
@@ -254,11 +285,6 @@ class ErrorHandlers(Modded):
     def priorities_updating_warning(self, last_update):
         print('''Warning: you should run "{0} update" before in order to update debconf priorities list, which {1}'''.
               format(PROGRAM_NAME, ErrorHandlers.__last_update_str(last_update)))
-
-    def fixing_interrupted_debconf_configure_warning(self, pkg, package_priority, minimal_priority):
-        print('''Warning: now package "{0}" has questions at least "{1}" to configure with Debconf but Debconf minimal level is "{2}".'''.
-              format(self.modes.pkg_str(pkg), str(package_priority), str(minimal_priority)))
-
 
     #TODO: remove it
 #    def simple_markauto(self, pkg):

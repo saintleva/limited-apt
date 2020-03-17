@@ -150,6 +150,15 @@ class DpkgJournalDirtyError(PackageManagerError): pass
 
 class PrecedingTasksHasNotBeenCompletedError(PackageManagerError): pass
 
+class PackageNotExistNow(PackageManagerError):
+
+    def __init__(self, package):
+        self.__package = package
+
+    @property
+    def package(self):
+        return self.__package
+
 class NothingInterruptedError(TerminationError): pass
 
 class AptProcessingError(TerminationError): pass

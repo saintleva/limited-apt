@@ -357,7 +357,7 @@ class ModificationRunner(RunnerBase):
         changes = get_cache().get_changes()
 
         errors = False
-        if fixing_interrupted:
+        if not fixing_interrupted:
             def check_fatal():
                 nonlocal errors
                 errors = True
@@ -365,20 +365,28 @@ class ModificationRunner(RunnerBase):
                     raise SystemComposingByResolverError()
             def priorities_failure(pkg, package_priority):
                 self.handlers.may_not_debconf_configure(pkg, package_priority, minimal_priority)
+            def bad_priorities_failure(pkg):
+                self.handlers.bad_debconf_configure(pkg)
         else:
             def check_fatal():
                 pass
             def priorities_failure(pkg, package_priority):
-                self.handlers.fixing_interrupted_debconf_configure_warning(pkg, package_priority, minimal_priority)
+                self.handlers.now_debconf_configure_warning(pkg, package_priority, minimal_priority)
+            def bad_priorities_failure(pkg):
+                self.handlers.now_bad_debconf_configure_warning(pkg)
 
         for pkg in sorted(changes):
-            try:
-                state = priorities[ConcretePackage(pkg.shortname, pkg.candidate.architecture)]
-                if state.status == Status.PROCESSING_ERROR:
-
-            except KeyError:
-                priorities_failure(pkg, )
+            concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+            if not priorities.well_processed(concrete_package):
+                bad_priorities_failure(pkg)
                 check_fatal()
+            else:
+                state = priorities[concrete_package]
+                if state.status == Status.HAS_QUESTIONS and state.priority >= minimal_priority:
+                    priorities_failure(pkg, state.priority)
+                    check_fatal()
+
+        return not errors
 
 
     def __examine_and_apply_changes(self, tasks, real_tasks, enclosure, coownership):
@@ -704,29 +712,35 @@ class ModificationRunner(RunnerBase):
     def fix_interrupted(self):
         if self.username != "root":
             raise YouMayNotFixInterruptedError()
-        if not os.path.exists(PATH_TO_UMCOMPLETED_TASKS):
+        if not os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
             raise NothingInterruptedError()
 
         # Parse file with uncompleted tasks
         try:
             cache = get_cache()
-            root = etree.parse(PATH_TO_UMCOMPLETED_TASKS).getroot()
+            root = etree.parse(constants.PATH_TO_UMCOMPLETED_TASKS).getroot()
             interrupted_type = root.get("type")
             if interrupted_type == "safe-upgrade":
                 cache.upgrade(dist_upgrade=False)
             elif interrupted_type == "full-upgrade":
                 cache.upgrade(dist_upgrade=True)
-            elif interrupted_type == "full-upgrade":
+            elif interrupted_type == "operations":
                 tasks = RealTasks()
                 tasks.import_from_xml_element(root)
-                for package in tasks.install:
-                    cache[str(package)].mark_install()
-#                    if not pkg.is_installed:
-#                        pkg.mark_install()
-#                        pkg.ma
+                try:
+                    for package in tasks.install:
+                        cache[str(package)].mark_install()
+                    for package in tasks.remove + tasks.physically_remove:
+                        cache[str(package)].mark_delete()
+                    for package in tasks.remove + tasks.purge:
+                        cache[str(package)].mark_delete(purge=True)
+                    for package in tasks.markauto:
+                        cache[str(package)].mark_auto(auto=True)
+                    for package in tasks.unmarkauto:
+                        cache[str(package)].mark_auto(auto=False)
+                except KeyError:
+                    raise PackageNotExistNow(package)
             else:
-                pass
-        else:
-            raise ValueError()
+                raise ValueError()
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:
             pass

@@ -322,6 +322,10 @@ def privileged_main():
         if display_modes.wordy():
             print(''''{0}' is good. Nothing has been interrupaptted'''.format(PROGRAM_NAME))
         sys.exit(ExitCodes.NOTHING_INTERRUPTED.value)
+    except PackageNotExistNow as err:
+        print_error('''Error: package "{0}" you want to process to fix interrupted actions doesn't exist now'''.
+                    format(err.package))
+        sys.exit(ExitCodes.PACKAGE_NOT_EXIST_NOW.value)
     except (YouMayNotFixInterruptedError, YouMayNotIgnoreInterruptedError):
         print_error('''Error: only root is able to use "fix-interrupted" and "ignore-interrupted" subcommands''')
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
