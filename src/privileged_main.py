@@ -22,6 +22,7 @@
 
 import sys
 import argparse
+import apt
 import apt.progress.base
 import apt.progress.text
 from limitedapt.settings import *
@@ -169,7 +170,6 @@ def privileged_main():
     
     args = parser.parse_args(sys.argv[2:])
     
-
     display_modes = DisplayModes(args.show_arch, args.verbose, args.debug)
 
     try:
@@ -195,7 +195,8 @@ def privileged_main():
         settings.updatetime_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(settings.updatetime_module)
 
-        if args.subcommand in operation_subcommands_dics() | {'safe-upgrade', 'full-upgrade', 'diverse', 'fix-interrupted'}:
+        if args.subcommand in operation_subcommands_dics() | {'safe-upgrade', 'full-upgrade', 'diverse',
+                                                              'fix-interrupted', 'ignore-interrupted'}:
             work_modes = WorkModes(args.remove_dependencies, args.force, args.purge_unused, args.fatal_errors,
                                    args.assume_yes, args.simulate)
             # TODO: Use "apt.progress.FetchProgress()" when it has been implemented
@@ -208,6 +209,8 @@ def privileged_main():
                 runner.upgrade(full_upgrade=True)
             elif args.subcommand == 'fix-interrupted':
                 runner.fix_interrupted()
+            elif args.subcommand == 'ignore-interrupted':
+                runner.ignore_interrupted()
             else:
                 tasks = Tasks()
                 if args.subcommand == 'install':
@@ -296,6 +299,9 @@ def privileged_main():
     except CoownershipImportSyntaxError:
         print_error('Error while parsing coownership-list')
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_VARIABLE_FILE.value)
+    except RealTasksImportSyntaxError:
+        print_error('Error while parsing saved tasks')
+        sys.exit(ExitCodes.ERROR_WHILE_PARSING_VARIABLE_FILE.value)
     except DistroHasNotBeenUpdated as err:
         last_update_str = "It has never been update" if err.time is None \
             else "It was last been updated at {0}".format(err.time.isoformat(sep=" ", timespec="seconds"))
@@ -304,6 +310,9 @@ def privileged_main():
         if display_modes.wordy():
             print('''Only root can avoid this using "--force" option''')
         sys.exit(ExitCodes.DISTRO_HAS_NOT_BEEN_UPDATED.value)
+    except NotEnoughSpace:
+        print_error('Error: not enough space on the disk')
+        sys.exit(ExitCodes.NOT_ENOUGH_SPACE.value)
     except DpkgJournalDirtyError:
         print_error('Error: Dpkg has been interrupted')
         if display_modes.wordy():
@@ -329,13 +338,13 @@ def privileged_main():
     except (YouMayNotFixInterruptedError, YouMayNotIgnoreInterruptedError):
         print_error('''Error: only root is able to use "fix-interrupted" and "ignore-interrupted" subcommands''')
         sys.exit(ExitCodes.YOU_HAVE_NOT_PRIVILEGES.value)
-    except LockFailedError as err:
+    except apt.cache.LockFailedException as err:
         print_error('CANNOT LOCK: ', err)
         sys.exit(ExitCodes.LOCK_FAILED.value)
-    except FetchCancelledError as err:
+    except apt.cache.FetchCancelledException as err:
         print_error('FETCH CANCELLED: ', err)
         sys.exit(ExitCodes.FETCH_CANCELLED.value)
-    except FetchFailedError as err:
+    except apt.cache.FetchFailedException as err:
         print_error('FETCH FAILED: ', err)
         sys.exit(ExitCodes.FETCH_FAILED.value)
     except apt_pkg.Error as err:

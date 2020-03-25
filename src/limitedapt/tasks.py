@@ -15,6 +15,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
+from lxml import etree
 import apt.package
 from limitedapt.packages import *
 from limitedapt.single import get_cache
@@ -40,7 +41,7 @@ class OnetypeRealTasks:
             for task in onetype_tasks:
                 if task in cache: # Emit packages that are not in repository
                     pkg = cache[task]
-                    self.__container.append(pkg)
+                    self.__container.append(ConcretePackage(pkg.shortname, pkg.candidate.architecture))
 
     def __bool__(self):
         return bool(self.__container)
@@ -63,25 +64,13 @@ class OnetypeRealTasks:
         return result
 
     def remove(self, concrete_package):
-        cache = get_cache()
-        pkg = cache[str(concrete_package)]
-        self.__container.remove(pkg)
+        self.__container.remove(concrete_package)
 
-    #TODO: remove it
-    def __str__(self):
+    def clear(self):
+        self.__container.clear()
 
-        def list_to_str(items):
-            result = ""
-            is_first = True
-            for item in items:
-                if not is_first:
-                    result += ", "
-                result += str(item)
-                is_first = False
-            return result
-
-        for package in self.__container:
-            return str(package) + ", "
+    def append(self, package):
+        self.__container.append(package)
 
 
 class RealTasks:
@@ -120,3 +109,32 @@ class RealTasks:
 
     def is_empty(self):
         return not (self.install or self.remove or self.physically_remove or self.purge or self.markauto or self.unmarkauto)
+
+    def export_to_xml_element(self, parent):
+
+        def export_onetype(type, container):
+            onetype_element = etree.SubElement(parent, type)
+            for package in container:
+                etree.SubElement(onetype_element, "package", name=package.name, arch=package.architecture)
+
+        export_onetype("install", self.install)
+        export_onetype("remove", self.remove)
+        export_onetype("physically-remove", self.physically_remove)
+        export_onetype("purge", self.purge)
+        export_onetype("markauto", self.markauto)
+        export_onetype("unmarkauto", self.unmarkauto)
+
+    def import_from_xml_element(self, parent):
+
+        def import_onetype(type, container):
+            onetype_element = parent.find(type)
+            container.clear()
+            for package_element in onetype_element.findall("package"):
+                container.append(ConcretePackage(package_element.get("name"), package_element.get("arch")))
+
+        import_onetype("install", self.__install)
+        import_onetype("remove", self.__remove)
+        import_onetype("physically-remove", self.__physically_remove)
+        import_onetype("purge", self.__purge)
+        import_onetype("markauto", self.__markauto)
+        import_onetype("unmarkauto", self.__unmarkauto)

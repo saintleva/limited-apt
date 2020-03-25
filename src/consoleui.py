@@ -163,6 +163,10 @@ class ErrorHandlers(Modded):
         print('''Error: you have not permissions to upgrade package "{0}" to version "{1}" because '''
               '''{2} is system-constitutive'''.format(self.modes.pkg_str(pkg), pkg.candidate.version, what))
 
+    def now_upgrade_to_new_warning(self, pkg):
+        print('''Warning: this new version "{1}" you want to upgrade package "{0}" to is system-constitutive'''.
+              format(self.modes.pkg_str(pkg), pkg.candidate.version))
+
     def is_not_installed(self, pkg, why_must_be):
         action_dict = {"remove" : 'remove',
                        "physically-remove" : 'physically remove',

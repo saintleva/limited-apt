@@ -18,9 +18,12 @@
 
 import importlib.util
 from datetime import datetime
+import enum
 import pwd
 import grp
+import os
 import os.path
+import shutil
 from lxml import etree
 import apt
 import apt_pkg
@@ -60,7 +63,10 @@ class Progresses:
     @property
     def install(self):
         return self.__install
-    
+
+
+class RealTasksImportSyntaxError(XmlImportSyntaxError): pass
+
 
 class RunnerBase:
 
@@ -272,10 +278,6 @@ class PrintRunner(RunnerBase):
 class ModificationRunner(RunnerBase):
 
     def __init__(self, settings, user_id, display_modes, work_modes, handlers, applying_ui, progresses, debug_stream):
-        if get_cache().dpkg_journal_dirty:
-            raise DpkgJournalDirtyError()
-        if os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
-            raise PrecedingTasksHasNotBeenCompletedError()
         self.__work_modes = work_modes
         super().__init__(settings, user_id, display_modes, debug_stream)
         self.__handlers = handlers
@@ -345,6 +347,12 @@ class ModificationRunner(RunnerBase):
         if self.settings.updatetime_module.is_priorities_update_needed(update_times.priorities):
             self.handlers.priorities_updating_warning(update_times.priorities)
 
+    def __check_interrupted(self):
+        if get_cache().dpkg_journal_dirty:
+            raise DpkgJournalDirtyError()
+        if os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
+            raise PrecedingTasksHasNotBeenCompletedError()
+
     # TODO: Do I really need it?
     def __load_program_options(self):
         apt_pkg.init_config()
@@ -388,6 +396,29 @@ class ModificationRunner(RunnerBase):
 
         return not errors
 
+    def __check_free_space(self):
+
+        def get_partition(path):
+            output = subprocess.getoutput('df {0}'.format(path))
+            lines = output.splitlines()
+            return lines[1].split()[0]
+
+        usr_total, usr_used, usr_free = shutil.disk_usage('/usr/')
+        apt_archives_total, apt_archives_used, apt_archives_free = shutil.disk_usage('/var/cache/apt/archives/')
+        cache = get_cache()
+        minimal_free_space = self.settings.minimal_free_space
+
+        if get_partition('/usr/') == get_partition('/var/cache/apt/archives/'):
+            required = cache.required_space + cache.required_download
+            if not minimal_free_space.usr.less_or_equal_to_other(usr_free - required, usr_total):
+                raise NotEnoughSpace()
+            if not minimal_free_space.apt_archives.less_or_equal_to_other(apt_archives_free - required, apt_archives_total):
+                raise NotEnoughSpace()
+        else:
+            if not minimal_free_space.usr.less_or_equal_to_other(usr_free - cache.required_space, usr_total):
+                raise NotEnoughSpace()
+            if not minimal_free_space.apt_archives.less_or_equal_to_other(usr_free - cache.required_download, usr_total):
+                raise NotEnoughSpace()
 
     def __examine_and_apply_changes(self, tasks, real_tasks, enclosure, coownership):
         cache = get_cache()
@@ -483,35 +514,40 @@ class ModificationRunner(RunnerBase):
         if real_tasks.is_empty():
             raise GoodExit()
 
+        if not self.work_modes.force:
+            self.__check_free_space()
+
         if self.work_modes.assume_yes or self.applying_ui.prompt_agree():
-            try:
-                if not self.work_modes.simulate:
-                    cache.commit(self.progresses.acquire, self.progresses.install)
-                    if not self.work_modes.simulate:
-                        self._save_coownership_list(coownership)
-                else:
-                    self.handlers.simulate()
-            except apt.cache.LockFailedException as err:
-                raise LockFailedError(err)
-            except apt.cache.FetchCancelledException as err:
-                raise FetchCancelledError(err)
-            except apt.cache.FetchFailedException as err:
-                raise FetchFailedError(err)
+            if not self.work_modes.simulate:
+                self._save_coownership_list(coownership)
+                cache.commit(self.progresses.acquire, self.progresses.install)
+                os.remove(constants.PATH_TO_UMCOMPLETED_TASKS)
+            else:
+                self.handlers.simulate()
         else:
             raise GoodExit()
 
     def upgrade(self, full_upgrade=True):
         if not self.has_privileges:
             raise YouMayNotUpgradeError(constants.UNIX_LIMITEDAPT_UPGRADERS_GROUPNAME, full_upgrade)
+        self.__check_interrupted()
         enclosure = self._load_enclosure()
         coownership = self._load_coownership_list()
         get_cache().upgrade(full_upgrade)
         tasks = Tasks()
+
+        type = "full-upgrade" if full_upgrade else "safe-upgrade"
+        root = etree.Element("tasks", {"type": type, "username": self.username,
+                                       "purge-unused": self.work_modes.purge_unused})
+        tree = etree.SubElement(root)
+        tree.write(constants.UNCOMPLETED_TASKS_FILENAME, pretty_print=True, encoding="UTF-8", xml_declaration=True)
+
         self.__examine_and_apply_changes(tasks, RealTasks(tasks), enclosure, coownership)
 
     def perform_operations(self, tasks):
         if not self.has_privileges:
             raise YouMayNotPerformError(constants.UNIX_LIMITEDAPT_GROUPNAME)
+        self.__check_interrupted()
 
         cache = get_cache()
         coownership = self._load_coownership_list()
@@ -707,6 +743,12 @@ class ModificationRunner(RunnerBase):
             if errors:
                 raise SystemComposingByResolverError()
 
+            root = etree.Element("tasks", {"type" : "operations", "username" : self.username,
+                                           "purge-unused" : self.work_modes.purge_unused})
+            real_tasks.export_to_xml_element(root)
+            tree = etree.SubElement(root)
+            tree.write(constants.UNCOMPLETED_TASKS_FILENAME, pretty_print=True, encoding="UTF-8", xml_declaration=True)
+
             self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership)
 
     def fix_interrupted(self):
@@ -720,27 +762,88 @@ class ModificationRunner(RunnerBase):
             cache = get_cache()
             root = etree.parse(constants.PATH_TO_UMCOMPLETED_TASKS).getroot()
             interrupted_type = root.get("type")
+            username = root.get("username")
+            purge_unused = bool(root.get("purge-unused"))
+            real_tasks = RealTasks()
             if interrupted_type == "safe-upgrade":
                 cache.upgrade(dist_upgrade=False)
             elif interrupted_type == "full-upgrade":
                 cache.upgrade(dist_upgrade=True)
             elif interrupted_type == "operations":
-                tasks = RealTasks()
-                tasks.import_from_xml_element(root)
+                real_tasks.import_from_xml_element(root)
                 try:
-                    for package in tasks.install:
-                        cache[str(package)].mark_install()
-                    for package in tasks.remove + tasks.physically_remove:
-                        cache[str(package)].mark_delete()
-                    for package in tasks.remove + tasks.purge:
-                        cache[str(package)].mark_delete(purge=True)
-                    for package in tasks.markauto:
-                        cache[str(package)].mark_auto(auto=True)
-                    for package in tasks.unmarkauto:
-                        cache[str(package)].mark_auto(auto=False)
+                    with cache.actiongroup():
+                        for package in real_tasks.install:
+                            cache[str(package)].mark_install()
+                        for package in real_tasks.remove + real_tasks.physically_remove:
+                            cache[str(package)].mark_delete()
+                        for package in real_tasks.remove + real_tasks.purge:
+                            cache[str(package)].mark_delete(purge=True)
+                        for package in real_tasks.markauto:
+                            cache[str(package)].mark_auto(auto=True)
+                        for package in real_tasks.unmarkauto:
+                            cache[str(package)].mark_auto(auto=False)
                 except KeyError:
                     raise PackageNotExistNow(package)
             else:
                 raise ValueError()
         except (ValueError, LookupError, etree.XMLSyntaxError) as err:
-            pass
+            raise RealTasksImportSyntaxError()
+
+        changes = cache.get_changes()
+        all_changes = get_all_changes(changes, real_tasks)
+
+        if self.work_modes.purge_unused:
+            for pkg in changes:
+                if pkg.marked_delete and not pkg in (real_tasks.remove + real_tasks.physically_remove):
+                    pkg.mark_delete(purge=True)
+                    if not pkg in all_changes.purge:
+                        all_changes.purge.append(pkg)
+
+        self.applying_ui.show_changes(all_changes)
+        self.handlers.resolving_done()
+
+        enclosure = self._load_enclosure()
+
+        if username != "root":
+            for pkg in sorted(changes):
+                versioned_package = VersionedPackage(pkg.shortname, pkg.candidate.architecture, pkg.candidate.version)
+                if pkg.marked_install and versioned_package not in enclosure:
+                    self.handlers.now_install_warning(pkg)
+                if pkg.is_installed and pkg.marked_upgrade and versioned_package not in enclosure:
+                    self.handlers.now_upgrade_to_new_warning(pkg)
+                if pkg.marked_downgrade and not self.work_modes.force:
+                    self.handlers.now_downgrade_warning(pkg)
+                if pkg.marked_keep:
+                    self.handlers.now_keep_warning(pkg)
+                if pkg.marked_delete and not pkg.is_auto_removable and pkg not in real_tasks:
+                    self.handlers.now_remove_warning(pkg)
+                if pkg.is_inst_broken and not pkg.is_now_broken:
+                    self.handlers.now_break_warning(pkg)
+                is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or
+                                      pkg.marked_upgrade or pkg.marked_downgrade)
+                if is_setup_operation:
+                    origin = pkg.candidate.origins[0]
+                    if not origin.trusted:
+                        self.handlers.now_untrusted_warning(pkg)
+
+            self.__check_priorities(fixing_interrupted=True)
+
+        if not self.work_modes.force:
+            self.__check_free_space()
+
+        if self.work_modes.assume_yes or self.applying_ui.prompt_agree():
+            if not self.work_modes.simulate:
+                cache.commit(self.progresses.acquire, self.progresses.install)
+                os.remove(constants.PATH_TO_UMCOMPLETED_TASKS)
+            else:
+                self.handlers.simulate()
+        else:
+            raise GoodExit()
+
+    def ignore_interrupted(self):
+        if self.username != "root":
+            raise YouMayNotFixInterruptedError()
+        if not os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
+            raise NothingInterruptedError()
+        os.remove(constants.PATH_TO_UMCOMPLETED_TASKS)

@@ -144,6 +144,8 @@ class DistroHasNotBeenUpdated(TerminationError):
     def time(self):
         return self.__time
 
+class NotEnoughSpace(TerminationError): pass
+
 class PackageManagerError(TerminationError): pass
 
 class DpkgJournalDirtyError(PackageManagerError): pass
@@ -160,11 +162,3 @@ class PackageNotExistNow(PackageManagerError):
         return self.__package
 
 class NothingInterruptedError(TerminationError): pass
-
-class AptProcessingError(TerminationError): pass
-
-class LockFailedError(AptProcessingError): pass
-
-class FetchCancelledError(AptProcessingError): pass
-
-class FetchFailedError(AptProcessingError): pass

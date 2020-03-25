@@ -9,9 +9,8 @@ from limitedapt.debconf import *
 
 def main():
     cache = get_cache()
-    priorities = DebconfPriorities()
     start_time = time.time()
-    priorities.import_from_xml("/home/anthony/projects/limited-apt/tools/obtain-priorities/test/priorities1")
+    priorities = DebconfPrioritiesDB("sqlite:////home/anthony/projects/limited-apt/tools/obtain-priorities/test/priorities1-db.sqlite")
     finish_time = time.time()
     print("Import time in sec: ", finish_time - start_time)
     for pkg in cache:

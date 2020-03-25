@@ -16,7 +16,7 @@
 #
 
 from lxml import etree
-from .errors import DataError
+from limitedapt.errors import DataError
 
 
 class SettingsImportError(DataError): pass
@@ -31,6 +31,9 @@ class EnclosureRecord:
     def __init__(self, filename, url):
         self.filename = filename
         self.url = url
+
+    def __eq__(self, other):
+        return self.filename == other.filename and self.url == other.url
 
 
 class Urls:
@@ -61,6 +64,9 @@ class SpaceAmount:
         self.is_relative = is_relative or False
         self.number = number or 0
 
+    def __eq__(self, other):
+        return self.is_relative == other.is_relative and self.number == other.number
+
     def less_or_equal_to_other(self, remaining_space, all_space):
         return self.number * all_space <= remaining_space if self.is_relative else self.number <= remaining_space
 
@@ -72,8 +78,6 @@ class SpaceAmount:
         try:
             if string.endswith("%"):
                 return SpaceAmount(True, float(string[:-1]) / 100)
-            elif string.endswith("B"):
-                return SpaceAmount(False, int(string[:-1]))
             elif string.endswith("KB"):
                 return SpaceAmount(False, 1000 * int(string[:-2]))
             elif string.endswith("KiB"):
@@ -90,6 +94,8 @@ class SpaceAmount:
                 return SpaceAmount(False, 1000_000_000_000 * int(string[:-2]))
             elif string.endswith("TiB"):
                 return SpaceAmount(False, 2 ** 40 * int(string[:-3]))
+            elif string.endswith("B"):
+                return SpaceAmount(False, int(string[:-1]))
             else:
                 raise BadSpaceAmount('String "{0}" cannot be a space amount'.format(string))
         except:

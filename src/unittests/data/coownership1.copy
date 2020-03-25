@@ -1,10 +1,10 @@
 <?xml version='1.0' encoding='UTF-8'?>
 <packages>
-  <package arch="amd64" name="3dchess">
+  <package name="3dchess" arch="amd64">
     <user name="root"/>
     <user name="root2"/>
   </package>
-  <package arch="amd64" name="extremetuxracer">
+  <package name="extremetuxracer" arch="amd64">
     <user name="1"/>
     <user name="2"/>
     <user name="4"/>
@@ -15,15 +15,15 @@
     <user name="henady"/>
     <user name="hey"/>
   </package>
-  <package arch="i386" name="extremetuxracer">
+  <package name="extremetuxracer" arch="i386">
     <user name="olduser1"/>
     <user name="olduser2"/>
   </package>
-  <package arch="armhf" name="konsole">
+  <package name="konsole" arch="armhf">
     <user name="anthony"/>
     <user name="loh"/>
   </package>
-  <package arch="all" name="python3-doc">
+  <package name="python3-doc" arch="all">
     <user name="anthony"/>
   </package>
 </packages>
