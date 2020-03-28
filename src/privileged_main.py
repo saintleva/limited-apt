@@ -29,6 +29,7 @@ from limitedapt.settings import *
 from limitedapt.tasks import *
 from limitedapt.errors import *
 from limitedapt.updatetime import *
+from limitedapt.download import DownloadError
 from limitedapt.runners import *
 from limitedapt.constants import *
 from limitedapt.debconf import DebconfshowParsingError
@@ -181,8 +182,11 @@ def privileged_main():
 
         settings = Settings(path_to_program_config)
 
+        settings_path = os.path.join(path_to_program_config, "settings")
+        if not os.path.exists(settings_path):
+            raise FileNotExist(settings_path)
         try:
-            settings.import_from_xml(os.path.join(path_to_program_config, "settings"))
+            settings.import_from_xml(settings_path)
         except NoEnclosureSpecified:
             print_error('''Error: no enclosure specified in the settings file''')
             sys.exit(ExitCodes.SETTINGS_FILE_ERROR.value)
@@ -190,13 +194,13 @@ def privileged_main():
             print_error('''Error: bad space amount in the settings file''')
             sys.exit(ExitCodes.SETTINGS_FILE_ERROR.value)
 
-        updatetime_filename = os.path.join(constants.updatetime_filename, "updating.py")
+        updatetime_filename = os.path.join(path_to_program_config, "updating.py")
         spec = importlib.util.spec_from_file_location("updating", updatetime_filename)
         settings.updatetime_module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(settings.updatetime_module)
 
-        if args.subcommand in operation_subcommands_dics() | {'safe-upgrade', 'full-upgrade', 'diverse',
-                                                              'fix-interrupted', 'ignore-interrupted'}:
+        if args.subcommand in operation_subcommands_dict.keys() | {'safe-upgrade', 'full-upgrade', 'diverse',
+                                                                   'fix-interrupted', 'ignore-interrupted'}:
             work_modes = WorkModes(args.remove_dependencies, args.force, args.purge_unused, args.fatal_errors,
                                    args.assume_yes, args.simulate)
             # TODO: Use "apt.progress.FetchProgress()" when it has been implemented
@@ -284,13 +288,16 @@ def privileged_main():
     except FileNotExist as err:
         print_error('''Error: file "{0}" doesn't exist'''.format(err.filename))
         sys.exit(ExitCodes.FILE_NOT_EXIST.value)
+    except DownloadError as err:
+        print_error('''Error: cannot download from "{0}" to "{1}"'''.format(err.url, err.filename))
+        sys.exit(ExitCodes.CANNOT_DOWNLOAD.value)
     except ReadingVariableFileError as err:
         print_error('''Error number "{0}" appeared while reading file "{1}"'''.format(err.error_number, err.filename))
         sys.exit(ExitCodes.ERROR_WHILE_READING_VARIABLE_FILE.value)
     except WritingVariableFileError as err:
         print_error('''Error number "{0}" appeared while writing to file "{1}"'''.format(err.error_number, err.filename))
         sys.exit(ExitCodes.ERROR_WHILE_WRITING_VARIABLE_FILE.value)
-    except settings.SettingsImportError:
+    except SettingsImportError:
         print_error('Error while parsing program settings')
         sys.exit(ExitCodes.ERROR_WHILE_PARSING_SETTINGS.value)
     except EnclosureImportSyntaxError:

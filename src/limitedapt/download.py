@@ -15,12 +15,31 @@
 #
 
 import pycurl
+from limitedapt.errors import TerminationError
+
+
+class DownloadError(TerminationError):
+
+    def __init__(self, url, filename):
+        self.__url = url
+        self.__filename = filename
+
+    @property
+    def url(self):
+        return self.__url
+
+    @property
+    def filename(self):
+        return self.__filename
 
 
 def download_file(url, filename):
-    with open(filename, "wb") as fh:
-        curl = pycurl.Curl()
-        curl.setopt(curl.URL, url)
-        curl.setopt(curl.WRITEDATA, fh)
-        curl.perform()
-        curl.close()
+    try:
+        with open(filename, "wb") as fh:
+            curl = pycurl.Curl()
+            curl.setopt(curl.URL, url)
+            curl.setopt(curl.WRITEDATA, fh)
+            curl.perform()
+            curl.close()
+    except:
+        raise DownloadError(url, filename)

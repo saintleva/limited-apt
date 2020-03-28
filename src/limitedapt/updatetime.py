@@ -64,7 +64,7 @@ class UpdateTimes:
         return self.__enclosure
 
     @priorities.setter
-    def enclosure(self, priorities):
+    def priorities(self, priorities):
         self.__priorities = priorities
 
     def export_to_xml(self, file):

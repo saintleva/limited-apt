@@ -111,3 +111,6 @@ ENV/
 *.exe
 *.out
 *.app
+
+data/
+tools/obtain-priorities/test/

@@ -204,30 +204,27 @@ class UpdationRunner(RunnerBase):
         else:
             for record in self.settings.urls.enclosures:
                 filename = record.filename + '.enclosure'
-                self._debug_message('''loading enclosure from "{0}" to the file "{1}" ...'''.
+                self._debug_message('''downloading enclosure from "{0}" to the file "{1}" ...'''.
                                     format(record.url, filename))
                 download_file(record.url, filename)
 
     def update_priorities(self):
         filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, 'debconf-priorities.sqlite')
         url = self.settings.urls.debconf_priorities
-        self._debug_message('''loading debconf priorities from "{0}" to the file "{1}" ...'''.format(url, filename))
+        self._debug_message('''downloading debconf priorities from "{0}" to the file "{1}" ...'''.format(url, filename))
         download_file(url, filename)
 
     def update(self):
         cache = get_cache()
         update_times = UpdateTimes()
-        try:
-            cache.update(self.fetch_progress)
-            update_times.distro = datetime.now()
-            cache.open(None)  #TODO: Do I really need to re-open the cache here?
-            self.update_eclosure() #TODO: Do I need to use 'try' block?
-            update_times.enclosure = datetime.now()
-            self.update_priorities()
-            update_times.priorities = datetime.now()
-            self.__save_update_times(update_times)
-        except apt.cache.FetchFailedException as err:
-            raise FetchFailedError(err)
+        cache.update(self.fetch_progress)
+        update_times.distro = datetime.now()
+        cache.open(None)  #TODO: Do I really need to re-open the cache here?
+        self.update_eclosure()
+        update_times.enclosure = datetime.now()
+        self.update_priorities()
+        update_times.priorities = datetime.now()
+        self.__save_update_times(update_times)
 
 
 class PrintRunner(RunnerBase):
