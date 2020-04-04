@@ -418,7 +418,7 @@ class ModificationRunner(RunnerBase):
             if not minimal_free_space.apt_archives.less_or_equal_to_other(usr_free - cache.required_download, usr_total):
                 raise NotEnoughSpace()
 
-    def __examine_and_apply_changes(self, tasks, real_tasks, enclosure, coownership):
+    def __examine_and_apply_changes(self, tasks, real_tasks, enclosure, coownership, uncompleted_tasks_xml_element):
         cache = get_cache()
         changes = cache.get_changes()
         all_changes = get_all_changes(changes, real_tasks)
@@ -518,6 +518,10 @@ class ModificationRunner(RunnerBase):
         if self.work_modes.assume_yes or self.applying_ui.prompt_agree():
             if not self.work_modes.simulate:
                 self._save_coownership_list(coownership)
+                tree = etree.ElementTree(uncompleted_tasks_xml_element)
+                self._debug_message('file "{0}" creating...'.format(constants.PATH_TO_UNCOMPLETED_TASKS))
+                tree.write(constants.PATH_TO_UNCOMPLETED_TASKS, pretty_print=True, encoding="UTF-8",
+                           xml_declaration=True)
                 cache.commit(self.progresses.acquire, self.progresses.install)
                 os.remove(constants.PATH_TO_UNCOMPLETED_TASKS)
             else:
@@ -535,13 +539,10 @@ class ModificationRunner(RunnerBase):
         tasks = Tasks()
 
         type = "full-upgrade" if full_upgrade else "safe-upgrade"
-        root = etree.Element("tasks", {"type": type, "username": self.username,
-                                       "purge-unused": str(self.work_modes.purge_unused)})
-        tree = etree.ElementTree(root)
-        self._debug_message('file "{0}" creating...'.format(constants.PATH_TO_UNCOMPLETED_TASKS))
-        tree.write(constants.PATH_TO_UNCOMPLETED_TASKS, pretty_print=True, encoding="UTF-8", xml_declaration=True)
+        root_element = etree.Element("tasks", {"type": type, "username": self.username,
+                                               "purge-unused": str(self.work_modes.purge_unused)})
 
-        self.__examine_and_apply_changes(tasks, RealTasks(tasks), enclosure, coownership)
+        self.__examine_and_apply_changes(tasks, RealTasks(tasks), enclosure, coownership, root_element)
 
     def perform_operations(self, tasks):
         if not self.has_privileges:
@@ -742,14 +743,11 @@ class ModificationRunner(RunnerBase):
             if errors:
                 raise SystemComposingByResolverError()
 
-            root = etree.Element("tasks", {"type" : "operations", "username" : self.username,
-                                           "purge-unused" : str(self.work_modes.purge_unused)})
-            real_tasks.export_to_xml_element(root)
-            tree = etree.ElementTree(root)
-            self._debug_message('file "{0}" creating...'.format(constants.PATH_TO_UNCOMPLETED_TASKS))
-            tree.write(constants.PATH_TO_UNCOMPLETED_TASKS, pretty_print=True, encoding="UTF-8", xml_declaration=True)
+            root_element = etree.Element("tasks", {"type" : "operations", "username" : self.username,
+                                                   "purge-unused" : str(self.work_modes.purge_unused)})
+            real_tasks.export_to_xml_element(root_element)
 
-            self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership)
+            self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership, root_element)
 
     def fix_interrupted(self):
         if self.username != "root":
