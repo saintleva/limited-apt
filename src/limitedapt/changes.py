@@ -53,13 +53,13 @@ def get_all_changes(changes, tasks):
         if pkg.marked_keep:
             result.kept.append(pkg)
 
-    for pkg in tasks.install + tasks.unmarkauto: 
+    for pkg in (tasks.install + tasks.unmarkauto).pkgs():
         if pkg.is_installed and not pkg.marked_upgrade:
             result.logically_installed.append(pkg)
-    for pkg in tasks.remove + tasks.markauto:
+    for pkg in (tasks.remove + tasks.markauto).pkgs():
         if not pkg.marked_delete:
             result.logically_removed.append(pkg)
-    for pkg in tasks.purge:
+    for pkg in tasks.purge.pkgs():
         result.purged.append(pkg)
 
     return result

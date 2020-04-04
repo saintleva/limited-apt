@@ -51,7 +51,8 @@ def update_enclosure_by_debtags(filename):
     names = list(key for key, _ in itertools.groupby(seriated_names))
     
     enclosure = Enclosure()
-    enclosure.import_from_xml(filename)
+    if os.path.exists(filename):
+        enclosure.import_from_xml(filename)
     cache = get_cache()
     for name in names:
         pkg = cache[name]

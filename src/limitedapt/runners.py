@@ -167,7 +167,8 @@ class RunnerBase:
         if self.settings.urls.enclosure_debug_mode:
             enclosure = load_single(os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, "enclosure"))
         else:
-            enclosure_list = [load_single(record.filename + ".enclosure") for record in self.settings.urls.enclosures]
+            enclosure_list = [load_single(os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, record.filename + ".enclosure"))
+                              for record in self.settings.urls.enclosures]
             path_to_local_enclosure = os.path.join(self.settings.path_to_program_config, "local.enclosure")
             if os.path.exists(path_to_local_enclosure):
                 enclosure_list.append(load_single(path_to_local_enclosure))
@@ -203,7 +204,7 @@ class UpdationRunner(RunnerBase):
             debug.update_enclosure_by_debtags(filename)
         else:
             for record in self.settings.urls.enclosures:
-                filename = record.filename + '.enclosure'
+                filename = os.path.join(constants.PATH_TO_PROGRAM_VARIABLE, record.filename + '.enclosure')
                 self._debug_message('''downloading enclosure from "{0}" to the file "{1}" ...'''.
                                     format(record.url, filename))
                 download_file(record.url, filename)
@@ -347,7 +348,7 @@ class ModificationRunner(RunnerBase):
     def __check_interrupted(self):
         if get_cache().dpkg_journal_dirty:
             raise DpkgJournalDirtyError()
-        if os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
+        if os.path.exists(constants.PATH_TO_UNCOMPLETED_TASKS):
             raise PrecedingTasksHasNotBeenCompletedError()
 
     # TODO: Do I really need it?
@@ -518,7 +519,7 @@ class ModificationRunner(RunnerBase):
             if not self.work_modes.simulate:
                 self._save_coownership_list(coownership)
                 cache.commit(self.progresses.acquire, self.progresses.install)
-                os.remove(constants.PATH_TO_UMCOMPLETED_TASKS)
+                os.remove(constants.PATH_TO_UNCOMPLETED_TASKS)
             else:
                 self.handlers.simulate()
         else:
@@ -535,9 +536,10 @@ class ModificationRunner(RunnerBase):
 
         type = "full-upgrade" if full_upgrade else "safe-upgrade"
         root = etree.Element("tasks", {"type": type, "username": self.username,
-                                       "purge-unused": self.work_modes.purge_unused})
-        tree = etree.SubElement(root)
-        tree.write(constants.UNCOMPLETED_TASKS_FILENAME, pretty_print=True, encoding="UTF-8", xml_declaration=True)
+                                       "purge-unused": str(self.work_modes.purge_unused)})
+        tree = etree.ElementTree(root)
+        self._debug_message('file "{0}" creating...'.format(constants.PATH_TO_UNCOMPLETED_TASKS))
+        tree.write(constants.PATH_TO_UNCOMPLETED_TASKS, pretty_print=True, encoding="UTF-8", xml_declaration=True)
 
         self.__examine_and_apply_changes(tasks, RealTasks(tasks), enclosure, coownership)
 
@@ -741,26 +743,27 @@ class ModificationRunner(RunnerBase):
                 raise SystemComposingByResolverError()
 
             root = etree.Element("tasks", {"type" : "operations", "username" : self.username,
-                                           "purge-unused" : self.work_modes.purge_unused})
+                                           "purge-unused" : str(self.work_modes.purge_unused)})
             real_tasks.export_to_xml_element(root)
-            tree = etree.SubElement(root)
-            tree.write(constants.UNCOMPLETED_TASKS_FILENAME, pretty_print=True, encoding="UTF-8", xml_declaration=True)
+            tree = etree.ElementTree(root)
+            self._debug_message('file "{0}" creating...'.format(constants.PATH_TO_UNCOMPLETED_TASKS))
+            tree.write(constants.PATH_TO_UNCOMPLETED_TASKS, pretty_print=True, encoding="UTF-8", xml_declaration=True)
 
             self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership)
 
     def fix_interrupted(self):
         if self.username != "root":
             raise YouMayNotFixInterruptedError()
-        if not os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
+        if not os.path.exists(constants.PATH_TO_UNCOMPLETED_TASKS):
             raise NothingInterruptedError()
 
         # Parse file with uncompleted tasks
         try:
             cache = get_cache()
-            root = etree.parse(constants.PATH_TO_UMCOMPLETED_TASKS).getroot()
+            root = etree.parse(constants.PATH_TO_UNCOMPLETED_TASKS).getroot()
             interrupted_type = root.get("type")
             username = root.get("username")
-            purge_unused = bool(root.get("purge-unused"))
+            purge_unused = root.get("purge-unused") == "True"
             real_tasks = RealTasks()
             if interrupted_type == "safe-upgrade":
                 cache.upgrade(dist_upgrade=False)
@@ -832,7 +835,7 @@ class ModificationRunner(RunnerBase):
         if self.work_modes.assume_yes or self.applying_ui.prompt_agree():
             if not self.work_modes.simulate:
                 cache.commit(self.progresses.acquire, self.progresses.install)
-                os.remove(constants.PATH_TO_UMCOMPLETED_TASKS)
+                os.remove(constants.PATH_TO_UNCOMPLETED_TASKS)
             else:
                 self.handlers.simulate()
         else:
@@ -841,6 +844,6 @@ class ModificationRunner(RunnerBase):
     def ignore_interrupted(self):
         if self.username != "root":
             raise YouMayNotFixInterruptedError()
-        if not os.path.exists(constants.PATH_TO_UMCOMPLETED_TASKS):
+        if not os.path.exists(constants.PATH_TO_UNCOMPLETED_TASKS):
             raise NothingInterruptedError()
-        os.remove(constants.PATH_TO_UMCOMPLETED_TASKS)
+        os.remove(constants.PATH_TO_UNCOMPLETED_TASKS)

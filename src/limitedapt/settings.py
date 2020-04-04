@@ -50,7 +50,11 @@ class Urls:
         etree.SubElement(base_element, "debconf-priorities", url=self.debconf_priorities)
 
     def import_from_xml_element(self, base_element):
-        self.enclosure_debug_mode = bool(base_element.get("enclosure-debug-mode")) or False
+        debug_mode_attr = base_element.get("enclosure-debug-mode")
+        if debug_mode_attr is None:
+            self.enclosure_debug_mode = False
+        else:
+            self.enclosure_debug_mode = debug_mode_attr == "True"
         for enclosure_element in base_element.findall("enclosure"):
             self.enclosures.append(EnclosureRecord(enclosure_element.get("filename"), enclosure_element.get("url")))
         if not self.enclosure_debug_mode and not self.enclosures:

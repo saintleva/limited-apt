@@ -58,6 +58,11 @@ class OnetypeRealTasks:
     def __iter__(self):
         return iter(self.__container)
 
+    def pkgs(self):
+        cache = get_cache()
+        for package in self.__container:
+            yield cache[str(package)]
+
     def __add__(self, other):
         result = OnetypeRealTasks()
         result.__container = self.__container + other.__container

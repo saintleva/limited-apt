@@ -173,13 +173,17 @@ class Enclosure:
         try:
             root = etree.parse(file).getroot()
             self.clear()
+            for fullpackage_element in root.findall("fullpackage"):
+                arch_and_versions = ArchAndVersions(isevery=True)
+                arch_and_versions.every = Versions(isevery=True)
+                self.add_package(fullpackage_element.get("name"), arch_and_versions)
             for package_element in root.findall("package"):
                 everyarch_element = package_element.find("everyarch")
                 if everyarch_element is not None:
                     arch_and_versions = ArchAndVersions(isevery=True)
                     everyversion_element = everyarch_element.find("everyversion")
                     if everyversion_element is not None:
-                        arch_and_versions.every = Versions(isevery=True )
+                        arch_and_versions.every = Versions(isevery=True)
                     else:
                         versions = Versions()
                         for version_element in everyarch_element.findall("version"):

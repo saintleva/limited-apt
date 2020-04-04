@@ -96,6 +96,9 @@ class Priority(enum.Enum):
     def __lt__(self, other):
         return self.value < other.value
 
+    def __ge__(self, other):
+        return self.value >= other.value
+
     def __hash__(self):
         return hash(self.value)
 
