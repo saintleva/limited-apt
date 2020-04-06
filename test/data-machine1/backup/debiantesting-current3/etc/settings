@@ -1,0 +1,13 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<settings>
+    <urls>
+        <enclosure filename="1" url="file:///mnt/limited-apt-data/data/1"/>
+        <enclosure filename="2" url="file:///mnt/limited-apt-data/data/2"/>
+        <enclosure filename="3" url="file:///mnt/limited-apt-data/data/3"/>
+        <debconf-priorities url="file:///mnt/limited-apt-data/data/debconf-priorities.sqlite"/>
+    </urls>
+    <minimal-free-space>
+        <apt-archives amount="1GiB" />
+        <usr amount="5%" />
+    </minimal-free-space>
+</settings>

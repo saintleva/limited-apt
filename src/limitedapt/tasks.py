@@ -48,10 +48,10 @@ class OnetypeRealTasks:
 
     def __contains__(self, package):
         if isinstance(package, apt.package.Package):
-            return package in self.__container
-        elif isinstance(package, ConcretePackage):
             cache = get_cache()
-            return cache[str(package)] in self.__container
+            return ConcretePackage(package.shortname, package.candidate.architecture) in self.__container
+        elif isinstance(package, ConcretePackage):
+            return package in self.__container
         else:
             raise TypeError("ConcretePackage or apt.package.Package instance is required")
 

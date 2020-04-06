@@ -44,7 +44,10 @@ from limitedapt.download import *
 
 DEBUG = True
 
-     
+def is_setup_operation(pkg):
+    return pkg.marked_install or pkg.marked_reinstall or pkg.marked_upgrade or pkg.marked_downgrade
+
+
 class Progresses:
     
     def __init__(self, fetch, acquire, install):   
@@ -382,15 +385,16 @@ class ModificationRunner(RunnerBase):
                 self.handlers.now_bad_debconf_configure_warning(pkg)
 
         for pkg in sorted(changes):
-            concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
-            if not priorities.well_processed(concrete_package):
-                bad_priorities_failure(pkg)
-                check_fatal()
-            else:
-                state = priorities[concrete_package]
-                if state.status == Status.HAS_QUESTIONS and state.priority >= minimal_priority:
-                    priorities_failure(pkg, state.priority)
+            if is_setup_operation(pkg):
+                concrete_package = ConcretePackage(pkg.shortname, pkg.candidate.architecture)
+                if not priorities.well_processed(concrete_package):
+                    bad_priorities_failure(pkg)
                     check_fatal()
+                else:
+                    state = priorities[concrete_package]
+                    if state.status == Status.HAS_QUESTIONS and state.priority >= minimal_priority:
+                        priorities_failure(pkg, state.priority)
+                        check_fatal()
 
         return not errors
 
@@ -463,9 +467,10 @@ class ModificationRunner(RunnerBase):
                     else:
                         self.handlers.may_not_keep()
                         check_fatal()
-                if pkg.marked_delete and not pkg.is_auto_removable and pkg not in real_tasks:
+                if pkg.marked_delete and not pkg.is_auto_removable and \
+                        pkg not in (real_tasks.remove + real_tasks.physically_remove + real_tasks.purge):
                     sole_owns = coownership.is_sole_own(concrete_package, self.username)
-                    if self.work_modes.remove_dependecies:
+                    if self.work_modes.remove_dependencies:
                         if sole_owns:
                             # User will be never being root here
                             coownership.remove_ownership(concrete_package, self.username)
@@ -493,9 +498,7 @@ class ModificationRunner(RunnerBase):
                 #                         check_fatal()
 
                 # TODO: Действительно ли я должен проверять это?
-                is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or
-                                      pkg.marked_upgrade or pkg.marked_downgrade)
-                if is_setup_operation:
+                if is_setup_operation(pkg):
                     # TODO: Может быть я должен просматривать весь список origins?
                     origin = pkg.candidate.origins[0]
 
@@ -762,7 +765,7 @@ class ModificationRunner(RunnerBase):
             interrupted_type = root.get("type")
             username = root.get("username")
             purge_unused = root.get("purge-unused") == "True"
-            real_tasks = RealTasks()
+            real_tasks = RealTasks(Tasks())
             if interrupted_type == "safe-upgrade":
                 cache.upgrade(dist_upgrade=False)
             elif interrupted_type == "full-upgrade":
@@ -814,13 +817,12 @@ class ModificationRunner(RunnerBase):
                     self.handlers.now_downgrade_warning(pkg)
                 if pkg.marked_keep:
                     self.handlers.now_keep_warning(pkg)
-                if pkg.marked_delete and not pkg.is_auto_removable and pkg not in real_tasks:
+                if pkg.marked_delete and not pkg.is_auto_removable and \
+                        pkg not in (real_tasks.remove + real_tasks.physically_remove + real_tasks.purge):
                     self.handlers.now_remove_warning(pkg)
                 if pkg.is_inst_broken and not pkg.is_now_broken:
                     self.handlers.now_break_warning(pkg)
-                is_setup_operation = (pkg.marked_install or pkg.marked_reinstall or
-                                      pkg.marked_upgrade or pkg.marked_downgrade)
-                if is_setup_operation:
+                if is_setup_operation(pkg):
                     origin = pkg.candidate.origins[0]
                     if not origin.trusted:
                         self.handlers.now_untrusted_warning(pkg)
