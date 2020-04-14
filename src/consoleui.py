@@ -18,6 +18,7 @@
 
 import time
 import subprocess
+import shutil
 from limitedapt import single
 from limitedapt.constants import *
 from limitedapt.modes import Modded
@@ -28,15 +29,11 @@ from metrics import *
 
 PROGRAM_NAME = 'limited-apt'
 
-@single.run_once
+
 def get_terminal_width():
-    try:        
-        columns = subprocess.getoutput("stty size").split()[1]
-        return int(columns)
-    except:
-        return 80 # default value
-    
-     
+    return shutil.get_terminal_size().columns
+
+
 class Applying(Modded):
     
     def show_changes(self, all_changes):

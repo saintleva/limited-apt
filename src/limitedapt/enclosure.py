@@ -1,4 +1,4 @@
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -16,7 +16,7 @@
 '''Package "enclosure" structure description and processing'''
 
 from lxml import etree
-from limitedapt.errors import *
+from .errors import *
 
 
 class EveryError(Error): pass
@@ -150,22 +150,22 @@ class Enclosure:
     def export_to_xml(self, file):
         root = etree.Element("enclosure")
         for pkg, arch_and_versions in sorted(self.__packages.items(), key=lambda x: x[0]):
-            package_element = etree.SubElement(root, "package", name=pkg)
-            if arch_and_versions.isevery:
-                everyarch_element = etree.SubElement(package_element, "everyarch")
-                if arch_and_versions.every.isevery:
-                    etree.SubElement(everyarch_element, "everyversion")
-                else:
+            if arch_and_versions.isevery and arch_and_versions.every.isevery:
+                etree.SubElement(root, "fullpackage", name=pkg)
+            else:
+                package_element = etree.SubElement(root, "package", name=pkg)
+                if arch_and_versions.isevery:
+                    everyarch_element = etree.SubElement(package_element, "everyarch")
                     for version in sorted(arch_and_versions.every):
                         etree.SubElement(everyarch_element, "version", number=version)
-            else:
-                for arch, versions in sorted(arch_and_versions, key=lambda x: x[0]):
-                    arch_element = etree.SubElement(package_element, "arch", name=arch)
-                    if versions.isevery:
-                        etree.SubElement(arch_element, "everyversion")
-                    else:
-                        for version in sorted(versions):
-                            etree.SubElement(arch_element, "version", number=version)
+                else:
+                    for arch, versions in sorted(arch_and_versions, key=lambda x: x[0]):
+                        arch_element = etree.SubElement(package_element, "arch", name=arch)
+                        if versions.isevery:
+                            etree.SubElement(arch_element, "everyversion")
+                        else:
+                            for version in sorted(versions):
+                                etree.SubElement(arch_element, "version", number=version)
         tree = etree.ElementTree(root)
         tree.write(file, pretty_print=True, encoding="UTF-8", xml_declaration=True)          
     

@@ -22,6 +22,7 @@
 
 import sys
 import argparse
+import subprocess
 import apt
 import apt.progress.base
 import apt.progress.text
@@ -43,22 +44,39 @@ SOFTWARE_VERSION = '0.1a'
 PROGRAM_NAME = 'limited-apt'
 
 
+class PrivilegedScriptRunIncorrectlyError(Error): pass
+
 def print_error(*args):
     print(*args, file=sys.stderr)
+
+def get_user_id():
+    #TODO: remove it
+    import limitedapt.debug
+    limitedapt.debug.debug_suidbit("privileged_main()")
+
+    output = subprocess.getoutput('env')
+    lines = output.splitlines()
+    for line in lines:
+        if line.startswith("SUDO_UID"):
+            pair = line.split("=")
+            try:
+                return int(pair[1])
+            except:
+                raise PrivilegedScriptRunIncorrectlyError()
+    raise PrivilegedScriptRunIncorrectlyError()
 
 def privileged_main():
     
     # if DEBUG:
     #     debug_suidbit("privileged_main()")
     #     print('PROGRAM ARGUMENTS: ', sys.argv)
-        
-    
+
     #TODO: How must I to compute "user_id"?
     #user_id = os.getuid()
     # extract first program argument as id of real user
     try:
-        user_id = int(sys.argv[1]) 
-    except:
+        user_id = get_user_id()
+    except PrivilegedScriptRunIncorrectlyError:
         print_error('This privileged script has been run incorrectly')
         sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY.value)
         
@@ -169,7 +187,7 @@ def privileged_main():
 
     # Parse and analyse arguments
     
-    args = parser.parse_args(sys.argv[2:])
+    args = parser.parse_args(sys.argv[1:])
     
     display_modes = DisplayModes(args.show_arch, args.verbose, args.debug)
 
@@ -324,7 +342,7 @@ def privileged_main():
         print_error('Error: Dpkg has been interrupted')
         if display_modes.wordy():
             print('''All dpkg operations will fail until this is fixed, the action to fix the system '''
-                  '''if dpkg got interrupted is to run ‘dpkg –configure -a’ as root''')
+                  '''if dpkg got interrupted is to run ‘dpkg -–configure -a’ as root''')
         sys.exit(ExitCodes.DPKG_JOUNAL_DIRTY.value)
     except PrecedingTasksHasNotBeenCompletedError:
         print_error('Error: preceding tasks has been interruped')

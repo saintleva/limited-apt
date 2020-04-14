@@ -21,9 +21,9 @@ import time
 import subprocess
 import apt
 
-from limitedapt.packages import VersionedPackage
-from limitedapt.enclosure import *
-from limitedapt.single import get_cache
+from .packages import VersionedPackage
+from .enclosure import *
+from .single import get_cache
 
 
 def debug_suidbit(place):

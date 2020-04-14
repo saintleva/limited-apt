@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -18,8 +18,8 @@
 
 import enum
 from lxml import etree
-from limitedapt.packages import ConcretePackage
-from limitedapt.errors import *
+from .packages import ConcretePackage
+from .errors import *
 
 
 class CoownershipError(Error): pass

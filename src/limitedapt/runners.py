@@ -1,4 +1,4 @@
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -28,18 +28,19 @@ from lxml import etree
 import apt
 import apt_pkg
 import apt.progress.base
-from limitedapt.single import get_cache
-from limitedapt import constants, debug
-from limitedapt.errors import *
-from limitedapt.packages import *
-from limitedapt.coownership import *
-from limitedapt.enclosure import *
-from limitedapt.tasks import *
-from limitedapt.changes import *
-from limitedapt.modes import *
-from limitedapt.updatetime import *
-from limitedapt.debconf import *
-from limitedapt.download import *
+from .single import get_cache
+from limitedapt import constants
+from limitedapt import debug
+from .errors import *
+from .packages import *
+from .coownership import *
+from .enclosure import *
+from .tasks import *
+from .changes import *
+from .modes import *
+from .updatetime import *
+from .debconf import *
+from .download import *
 
 
 DEBUG = True
@@ -422,6 +423,10 @@ class ModificationRunner(RunnerBase):
             if not minimal_free_space.apt_archives.less_or_equal_to_other(usr_free - cache.required_download, usr_total):
                 raise NotEnoughSpace()
 
+    def __remove_uncompleted_tasks_file(self):
+        self._debug_message('file "{0}" deleting...'.format(constants.PATH_TO_UNCOMPLETED_TASKS))
+        os.remove(constants.PATH_TO_UNCOMPLETED_TASKS)
+
     def __examine_and_apply_changes(self, tasks, real_tasks, enclosure, coownership, uncompleted_tasks_xml_element):
         cache = get_cache()
         changes = cache.get_changes()
@@ -523,10 +528,13 @@ class ModificationRunner(RunnerBase):
                 self._save_coownership_list(coownership)
                 tree = etree.ElementTree(uncompleted_tasks_xml_element)
                 self._debug_message('file "{0}" creating...'.format(constants.PATH_TO_UNCOMPLETED_TASKS))
-                tree.write(constants.PATH_TO_UNCOMPLETED_TASKS, pretty_print=True, encoding="UTF-8",
-                           xml_declaration=True)
+                string = etree.tostring(tree, pretty_print=True)
+                with open(constants.PATH_TO_UNCOMPLETED_TASKS, "wb") as file:
+                    file.write(string)
+                    file.flush()
+                    os.fsync(file)
                 cache.commit(self.progresses.acquire, self.progresses.install)
-                os.remove(constants.PATH_TO_UNCOMPLETED_TASKS)
+                self.__remove_uncompleted_tasks_file()
             else:
                 self.handlers.simulate()
         else:
@@ -752,11 +760,16 @@ class ModificationRunner(RunnerBase):
 
             self.__examine_and_apply_changes(tasks, real_tasks, enclosure, coownership, root_element)
 
-    def fix_interrupted(self):
+    def __check_interrupted_fixing(self):
+        if get_cache().dpkg_journal_dirty:
+            raise DpkgJournalDirtyError()
         if self.username != "root":
             raise YouMayNotFixInterruptedError()
         if not os.path.exists(constants.PATH_TO_UNCOMPLETED_TASKS):
             raise NothingInterruptedError()
+
+    def fix_interrupted(self):
+        self.__check_interrupted_fixing()
 
         # Parse file with uncompleted tasks
         try:
@@ -826,7 +839,6 @@ class ModificationRunner(RunnerBase):
                     origin = pkg.candidate.origins[0]
                     if not origin.trusted:
                         self.handlers.now_untrusted_warning(pkg)
-
             self.__check_priorities(fixing_interrupted=True)
 
         if not self.work_modes.force:
@@ -835,15 +847,12 @@ class ModificationRunner(RunnerBase):
         if self.work_modes.assume_yes or self.applying_ui.prompt_agree():
             if not self.work_modes.simulate:
                 cache.commit(self.progresses.acquire, self.progresses.install)
-                os.remove(constants.PATH_TO_UNCOMPLETED_TASKS)
+                self.__remove_uncompleted_tasks_file()
             else:
                 self.handlers.simulate()
         else:
             raise GoodExit()
 
     def ignore_interrupted(self):
-        if self.username != "root":
-            raise YouMayNotFixInterruptedError()
-        if not os.path.exists(constants.PATH_TO_UNCOMPLETED_TASKS):
-            raise NothingInterruptedError()
-        os.remove(constants.PATH_TO_UNCOMPLETED_TASKS)
+        self.__check_interrupted_fixing()
+        self.__remove_uncompleted_tasks_file()

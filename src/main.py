@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
+# Copyright (c) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -43,7 +43,7 @@ def main():
     #    print('main()')
     #    print(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
     #    print()
-    exitcode = subprocess.call(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
+    exitcode = subprocess.call(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE] + sys.argv[1:])
     sys.exit(exitcode)
     
 if __name__ == '__main__':

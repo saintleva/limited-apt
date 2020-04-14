@@ -1,4 +1,4 @@
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -15,7 +15,7 @@
 #
 
 import pycurl
-from limitedapt.errors import TerminationError
+from .errors import TerminationError
 
 
 class DownloadError(TerminationError):

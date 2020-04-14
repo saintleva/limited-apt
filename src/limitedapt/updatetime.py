@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -18,7 +18,7 @@
 from datetime import datetime
 import os.path
 from lxml import etree
-from limitedapt.errors import XmlImportSyntaxError
+from .errors import XmlImportSyntaxError
 
 
 class UpdateTimesImportSyntaxError(XmlImportSyntaxError): pass

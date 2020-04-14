@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 #
-# Copyright (C) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -16,11 +16,6 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 #
 
-
-#TODO: remove this
-# from unittests.test_coownership import *
-# from unittests.test_enclosure import *
-# from unittests.test_files import *
 
 from test_coownership import *
 from test_enclosure import *

@@ -114,3 +114,4 @@ ENV/
 
 data/
 tools/obtain-priorities/test/
+venv/

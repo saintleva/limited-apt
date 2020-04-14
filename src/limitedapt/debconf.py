@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -21,8 +21,8 @@ from lxml import etree
 from sqlalchemy import Column, types, create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from limitedapt.errors import Error
-from limitedapt.packages import *
+from .errors import Error
+from .packages import *
 
 
 class DebconfError(Error): pass

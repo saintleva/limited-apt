@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,8 +17,8 @@
 
 from lxml import etree
 import apt.package
-from limitedapt.packages import *
-from limitedapt.single import get_cache
+from .packages import *
+from .single import get_cache
 
 
 class Tasks:

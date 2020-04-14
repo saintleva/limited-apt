@@ -69,16 +69,8 @@
       <everyversion/>
     </arch>
   </package>
-  <package name="libc6">
-    <everyarch>
-      <everyversion/>
-    </everyarch>
-  </package>
-  <package name="libgcc1">
-    <everyarch>
-      <everyversion/>
-    </everyarch>
-  </package>
+  <fullpackage name="libc6"/>
+  <fullpackage name="libgcc1"/>
   <package name="libsdl-image1.2">
     <everyarch>
       <version number="1.2.10-2+b2"/>
@@ -86,40 +78,16 @@
       <version number="1.2.12-5+b2"/>
     </everyarch>
   </package>
-  <package name="libsdl-net1.2">
-    <everyarch>
-      <everyversion/>
-    </everyarch>
-  </package>
-  <package name="libsdl-ttf2.0-0">
-    <everyarch>
-      <everyversion/>
-    </everyarch>
-  </package>
-  <package name="libsdl1.2debian">
-    <everyarch>
-      <everyversion/>
-    </everyarch>
-  </package>
-  <package name="libstdc++6">
-    <everyarch>
-      <everyversion/>
-    </everyarch>
-  </package>
-  <package name="libxt6">
-    <everyarch>
-      <everyversion/>
-    </everyarch>
-  </package>
+  <fullpackage name="libsdl-net1.2"/>
+  <fullpackage name="libsdl-ttf2.0-0"/>
+  <fullpackage name="libsdl1.2debian"/>
+  <fullpackage name="libstdc++6"/>
+  <fullpackage name="libxt6"/>
   <package name="xaw3dg">
     <everyarch>
       <version number="1.5+E-18"/>
       <version number="1.5+E-18.2"/>
     </everyarch>
   </package>
-  <package name="zlib1g">
-    <everyarch>
-      <everyversion/>
-    </everyarch>
-  </package>
+  <fullpackage name="zlib1g"/>
 </enclosure>

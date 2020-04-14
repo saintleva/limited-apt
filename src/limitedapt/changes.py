@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -40,7 +40,7 @@ def get_all_changes(changes, tasks):
         else:
             if pkg.is_installed:
                 if pkg in tasks.install:
-                    if pkg.marked_upgrade:
+                    if pkg.marked_upgrade and not pkg.marked_install:
                         result.logically_installed_but_physically_upgraded.append(pkg)
                 elif pkg.marked_upgrade:
                     result.upgraded.append(pkg)
