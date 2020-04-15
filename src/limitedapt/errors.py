@@ -17,7 +17,6 @@
 '''Base exceptions for limited-apt library'''
 
 
-#TODO: May be I need to use "BaseException"
 class Error(Exception):
     '''Base exception for limited-apt library'''
     

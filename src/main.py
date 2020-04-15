@@ -20,29 +20,14 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 # THE SOFTWARE.
 
-
 import sys
-import os
 import subprocess
+
 
 PRIVILEGED_EXECUTABLE = '/usr/local/sbin/limited-apt_privileged'
 
+
 def main():
-    
-    #TODO: remove it
-#     print("main():")
-#     print('UID = {0}, EUID = {1}'.format(os.getuid(), os.geteuid()))
-#     print()
-
-    #TODO: move to right executor    
-    #exitcode = subprocess.call(['sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
-#    exitcode = subprocess.call([PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
-#    subprocess.call(['executor'] + sys.argv[1:])
-
-    # TODO: remove it
-    #    print('main()')
-    #    print(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE, str(os.getuid())] + sys.argv[1:])
-    #    print()
     exitcode = subprocess.call(['/usr/bin/sudo', PRIVILEGED_EXECUTABLE] + sys.argv[1:])
     sys.exit(exitcode)
     

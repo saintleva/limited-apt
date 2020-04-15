@@ -16,18 +16,14 @@
 '''Logics of limited-apt'''
 
 
-import importlib.util
 from datetime import datetime
-import enum
 import pwd
 import grp
 import os
 import os.path
 import shutil
 from lxml import etree
-import apt
 import apt_pkg
-import apt.progress.base
 from .single import get_cache
 from limitedapt import constants
 from limitedapt import debug
@@ -502,7 +498,6 @@ class ModificationRunner(RunnerBase):
                 #                         self.handlers.may_not_install_from_this_archive(origin.archive)
                 #                         check_fatal()
 
-                # TODO: Действительно ли я должен проверять это?
                 if is_setup_operation(pkg):
                     # TODO: Может быть я должен просматривать весь список origins?
                     origin = pkg.candidate.origins[0]

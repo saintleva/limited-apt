@@ -1,5 +1,5 @@
 #
-# Copyright (C) Anton Liaukevich 2011-2019 <leva.dev@gmail.com>
+# Copyright (C) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU Lesser General Public
@@ -17,12 +17,10 @@
 
 
 import time
-import subprocess
 import shutil
 from limitedapt import single
 from limitedapt.constants import *
 from limitedapt.modes import Modded
-from limitedapt.updatetime import UpdateTimes
 from limitedapt.debconf import *
 from metrics import *
 
@@ -286,12 +284,6 @@ class ErrorHandlers(Modded):
     def priorities_updating_warning(self, last_update):
         print('''Warning: you should run "{0} update" before in order to update debconf priorities list, which {1}'''.
               format(PROGRAM_NAME, ErrorHandlers.__last_update_str(last_update)))
-
-    #TODO: remove it
-#    def simple_markauto(self, pkg):
-#        if self.modes.verbose:
-#            print('''No simple user has marked package "{0}" automatically installed therefore physical "markauto" '''
-#                  '''is equivalent to simple 'markauto' in that case'''.format(self.modes.pkg_str(pkg)))
 
     def simulate(self):
         head = '...SIMULATING'

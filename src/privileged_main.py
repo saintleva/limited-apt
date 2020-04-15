@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-# Copyright (c) Anton Liaukevich 2011-2017 <leva.dev@gmail.com>
+# Copyright (c) Anton Liaukevich 2011-2020 <leva.dev@gmail.com>
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -21,8 +21,9 @@
 # THE SOFTWARE.
 
 import sys
+import os
 import argparse
-import subprocess
+import importlib.util
 import apt
 import apt.progress.base
 import apt.progress.text
@@ -34,49 +35,22 @@ from limitedapt.download import DownloadError
 from limitedapt.runners import *
 from limitedapt.constants import *
 from limitedapt.debconf import DebconfshowParsingError
-from limitedapt.debug import debug_suidbit
 from exitcodes import ExitCodes
 import consoleui
 
-DEBUG = True
 
-SOFTWARE_VERSION = '0.1a'
+SOFTWARE_VERSION = '0.9b'
 PROGRAM_NAME = 'limited-apt'
 
-
-class PrivilegedScriptRunIncorrectlyError(Error): pass
 
 def print_error(*args):
     print(*args, file=sys.stderr)
 
-def get_user_id():
-    #TODO: remove it
-    import limitedapt.debug
-    limitedapt.debug.debug_suidbit("privileged_main()")
-
-    output = subprocess.getoutput('env')
-    lines = output.splitlines()
-    for line in lines:
-        if line.startswith("SUDO_UID"):
-            pair = line.split("=")
-            try:
-                return int(pair[1])
-            except:
-                raise PrivilegedScriptRunIncorrectlyError()
-    raise PrivilegedScriptRunIncorrectlyError()
-
 def privileged_main():
     
-    # if DEBUG:
-    #     debug_suidbit("privileged_main()")
-    #     print('PROGRAM ARGUMENTS: ', sys.argv)
-
-    #TODO: How must I to compute "user_id"?
-    #user_id = os.getuid()
-    # extract first program argument as id of real user
     try:
-        user_id = get_user_id()
-    except PrivilegedScriptRunIncorrectlyError:
+        user_id = int(os.environ["SUDO_UID"])
+    except:
         print_error('This privileged script has been run incorrectly')
         sys.exit(ExitCodes.PRIVILEGED_SCRIPT_HAS_BEEN_RUN_INCORRECTLY.value)
         
